@@ -7,7 +7,7 @@ description: "Use when developing Odoo 18 or 19 modules — triggers automatic v
 
 Automatic behaviors for Odoo 18/19 module development. These activate without being asked.
 
-**Language:** Always respond in the same language the user writes in. If the user has not written anything yet, default to **English**. Never respond in French unless the user explicitly writes in French.
+**Language:** Always respond in the same language the user writes in. If the user writes in Spanish, respond in Spanish. If in English, respond in English. If the user has not written anything yet, wait — do not generate any response until the user sends their first message.
 
 ---
 
