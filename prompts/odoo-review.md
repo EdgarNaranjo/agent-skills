@@ -66,6 +66,7 @@ Evaluate each area below. Use these markers for every finding:
 | Check | Pass condition |
 |---|---|
 | Version format | Must match `18.0.x.x.x` or `19.0.x.x.x` depending on confirmed version |
+| Version is current | Flag if version looks stale — a modified module must have a bumped version. Format: `{odoo}.{major}.{minor}.{patch}.{hotfix}`. Bug fix → patch, new feature → minor, breaking → major |
 | `license` field present | Any SPDX license identifier (e.g. `LGPL-3`, `OPL-1`) |
 | `summary` field present | Non-empty string, ideally ≤ 100 chars |
 | `author` field present | Non-empty string |

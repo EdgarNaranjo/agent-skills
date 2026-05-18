@@ -32,7 +32,14 @@ Automatic behaviors for Odoo 18/19 module development. These activate without be
 7. **Verify structure after changes.**
    After writing or editing files, confirm: the file is listed in `__manifest__.py` (`data`, `demo`, or `assets` as appropriate), `__init__.py` imports are correct, and security records exist for new models.
 
-8. **Apply version-correct patterns automatically.**
+8. **Bump the module version in `__manifest__.py` on every change.**
+   Every time a module is modified, increment the version following Odoo's format `{odoo}.{major}.{minor}.{patch}.{hotfix}`:
+   - Bug fix / small correction → bump `patch` (e.g. `19.0.1.0.0` → `19.0.1.1.0`)
+   - New feature / new field or view → bump `minor` (e.g. `19.0.1.0.0` → `19.0.2.0.0`)
+   - Breaking change / data migration needed → bump `major` (e.g. `19.0.1.0.0` → `19.0.2.0.0` with migration script)
+   Always show the old and new version in your response. Never leave a modified module at the same version.
+
+9. **Apply version-correct patterns automatically.**
    Use the detected version to select the right API. Do not mix v16 patterns into v18/v19 code. When unsure, flag it and show both options.
 
 ---
