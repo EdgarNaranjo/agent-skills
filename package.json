@@ -1,0 +1,24 @@
+{
+  "name": "pi-odoo-workflow",
+  "version": "1.0.0",
+  "description": "Odoo 18/19 development workflow skill and prompt templates for pi coding agent",
+  "keywords": [
+    "pi-package",
+    "odoo",
+    "odoo-18",
+    "odoo-19",
+    "odoo-development",
+    "workflow"
+  ],
+  "author": "Edgar Naranjo <https://github.com/EdgarNaranjo>",
+  "license": "LGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EdgarNaranjo/pi-odoo-workflow"
+  },
+  "pi": {
+    "skills": ["./skills"],
+    "prompts": ["./prompts"],
+    "image": "https://raw.githubusercontent.com/EdgarNaranjo/pi-odoo-workflow/main/assets/preview.png"
+  }
+}
