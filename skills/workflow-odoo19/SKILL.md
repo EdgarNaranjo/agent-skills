@@ -7,14 +7,14 @@ description: "Use when developing Odoo 18 or 19 modules — triggers automatic v
 
 Automatic behaviors for Odoo 18/19 module development. These activate without being asked.
 
-**Language:** Always respond in the same language the user writes in. Never switch languages unprompted. If the user writes in Spanish, respond in Spanish. If in English, respond in English.
+**Language:** Always respond in the same language the user writes in. If the user has not written anything yet, default to **English**. Never respond in French unless the user explicitly writes in French.
 
 ---
 
 ## Default Behaviors
 
-1. **Confirm Odoo version once per session.**
-   If the target version (18 or 19) is not already known, ask before writing any code. Store the answer and never ask again in the same session.
+1. **Confirm Odoo version on first interaction.**
+   When the user sends their first message, if the target version (18 or 19) is not already known, ask before writing any code. Do NOT ask proactively before the user writes anything. Store the answer and never ask again in the same session.
 
 2. **Check module structure before changes.**
    Before touching any file, scan the module layout: `__manifest__.py`, `models/__init__.py`, `views/`, `security/`, `i18n/`, `tests/`. Note what exists and what is missing.
