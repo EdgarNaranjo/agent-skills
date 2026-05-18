@@ -75,3 +75,27 @@ The prompt templates are unique — no other Odoo skill package has `/slash` com
 ## License
 
 LGPL-3.0-or-later — same license as Odoo Community modules.
+
+## Extensions (auto-loaded)
+
+Two TypeScript extensions that run automatically — no commands needed:
+
+### 🐍 Odoo Context Injector (`odoo-context.ts`)
+
+When you open pi in a directory containing Odoo modules, it:
+1. Detects all `__manifest__.py` files
+2. Extracts module name, version, dependencies, models, inherited models, and view XML IDs
+3. Notifies you: *"🐍 Odoo: my_module (v19.0.1.0.0)"*
+4. Injects that context into Claude's system prompt automatically
+
+Claude then knows exactly which models exist, which views can be inherited, and which XML IDs are available — without you having to explain anything.
+
+Tool available to Claude: **`odoo_scan`** — returns the full module structure on demand.
+
+### 🔍 Odoo XML-ID Finder (`odoo-xmlid.ts`)
+
+Tool available to Claude: **`odoo_find_xmlid`** — finds the exact XML ID for any view, action, or record.
+
+Searches in order:
+1. **Local Odoo source** (if found at `~/odoo`, `~/src/odoo`, etc.) — instant grep
+2. **GitHub API** (`odoo/odoo` repository) — fallback with direct raw file links

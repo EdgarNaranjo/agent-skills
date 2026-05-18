@@ -19,6 +19,7 @@
   "pi": {
     "skills": ["./skills"],
     "prompts": ["./prompts"],
+    "extensions": ["./extensions"],
     "image": "https://raw.githubusercontent.com/EdgarNaranjo/pi-odoo-workflow/main/assets/preview.png"
   }
 }
