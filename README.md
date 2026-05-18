@@ -45,14 +45,17 @@ Type `/command` in pi to expand into full instructions:
 ## Install
 
 ```bash
-# Install globally
-pi install git:github.com/EdgarNaranjo/pi-odoo-workflow
+# Desde npm (recomendado)
+pi install npm:pi-odoo-workflow
 
-# Or with npx (also works with Claude Code)
-npx skills add EdgarNaranjo/pi-odoo-workflow -g -y
+# Desde GitHub
+pi install git:github.com/EdgarNaranjo/agent-skills
 
-# Test without installing
-pi -e git:github.com/EdgarNaranjo/pi-odoo-workflow
+# Con npx (también funciona con Claude Code)
+npx skills add EdgarNaranjo/agent-skills -g -y
+
+# Probar sin instalar
+pi -e git:github.com/EdgarNaranjo/agent-skills
 ```
 
 ## What makes this different
