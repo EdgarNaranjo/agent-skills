@@ -1,6 +1,6 @@
 {
   "name": "pi-odoo-workflow",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "Odoo 18/19 development workflow for pi coding agent — auto-detects modules, enforces quality automatically, and adds /slash commands for common tasks",
   "keywords": [
     "pi-package",
@@ -28,7 +28,8 @@
     "prompts/",
     "extensions/",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "assets/"
   ],
   "pi": {
     "skills": [
@@ -39,6 +40,7 @@
     ],
     "extensions": [
       "./extensions"
-    ]
+    ],
+    "image": "https://raw.githubusercontent.com/EdgarNaranjo/agent-skills/main/assets/preview.png"
   }
 }

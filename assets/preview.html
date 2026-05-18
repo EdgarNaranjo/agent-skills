@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px; height: 630px; overflow: hidden;
+    background: #0f0f19;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  }
+  .top-bar {
+    height: 5px;
+    background: linear-gradient(90deg, #714b67, #00a09d);
+  }
+  .left-bar {
+    position: absolute; top: 0; left: 0;
+    width: 5px; height: 100%;
+    background: linear-gradient(180deg, #714b67, #4a2f42);
+  }
+  .card {
+    position: absolute;
+    top: 50px; left: 60px;
+    width: 1080px; height: 530px;
+    background: linear-gradient(135deg, #1c1a30, #12111e);
+    border: 1px solid #2a2545;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .card-top { height: 5px; background: linear-gradient(90deg, #714b67, #00a09d); }
+  .header {
+    padding: 24px 36px 20px;
+    background: linear-gradient(135deg, #221e3a, #1a1830);
+    border-bottom: 1px solid #2a2545;
+  }
+  .logo-row { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+  .logo {
+    width: 40px; height: 40px; border-radius: 8px;
+    background: linear-gradient(135deg, #714b67, #00a09d);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .pkg-name { font-size: 26px; font-weight: 700; color: #e8e4f4; letter-spacing: -0.5px; }
+  .pkg-name span { color: #00a09d; }
+  .pkg-desc { font-size: 13px; color: #7a7895; margin-left: 54px; }
+  .badges { display: flex; gap: 8px; margin-top: 10px; margin-left: 54px; }
+  .badge {
+    padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  }
+  .badge-odoo { background: #714b6722; color: #b87fa8; border: 1px solid #714b6744; }
+  .badge-pi   { background: #00a09d22; color: #00c4c0; border: 1px solid #00a09d44; }
+  .badge-ts   { background: #3178c622; color: #5ba0e0; border: 1px solid #3178c644; }
+
+  .body { display: flex; gap: 0; height: calc(100% - 120px); }
+
+  /* LEFT — commands */
+  .left { width: 340px; padding: 22px 20px; border-right: 1px solid #1e1c33; }
+  .section-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+    color: #4a4870; margin-bottom: 12px; text-transform: uppercase;
+  }
+  .cmd { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+  .cmd-pill {
+    padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    min-width: 160px;
+  }
+  .cmd-pill.green  { background: #50c87822; color: #6ddb93; border: 1px solid #50c87844; }
+  .cmd-pill.yellow { background: #ffc85022; color: #ffd980; border: 1px solid #ffc85044; }
+  .cmd-pill.red    { background: #ff6b6b22; color: #ff9090; border: 1px solid #ff6b6b44; }
+  .cmd-pill.blue   { background: #5ba0e022; color: #80bfff; border: 1px solid #5ba0e044; }
+  .cmd-desc { font-size: 10px; color: #4a4870; }
+
+  /* MIDDLE — features */
+  .middle { flex: 1; padding: 22px 24px; border-right: 1px solid #1e1c33; }
+  .feature { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 11px; }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex-shrink: 0;
+  }
+  .dot.teal   { background: #00a09d; box-shadow: 0 0 6px #00a09d88; }
+  .dot.green  { background: #50c878; box-shadow: 0 0 6px #50c87888; }
+  .dot.yellow { background: #ffc850; box-shadow: 0 0 6px #ffc85088; }
+  .dot.purple { background: #9b7ebd; box-shadow: 0 0 6px #9b7ebd88; }
+  .feat-text { font-size: 12px; color: #9896b8; line-height: 1.4; }
+  .feat-text strong { color: #c8c4e4; font-weight: 600; }
+
+  /* RIGHT — install */
+  .right { width: 260px; padding: 22px 20px; }
+  .install-box {
+    background: #0d0c1a; border: 1px solid #2a2545;
+    border-radius: 8px; padding: 14px 16px; margin-bottom: 10px;
+  }
+  .install-label { font-size: 10px; color: #4a4870; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+  .install-cmd { font-size: 11px; color: #00c4c0; }
+  .install-cmd span { color: #5ba0e0; }
+  .stats { display: flex; gap: 10px; margin-top: 14px; }
+  .stat { flex: 1; text-align: center; }
+  .stat-num { font-size: 22px; font-weight: 700; color: #e8e4f4; }
+  .stat-lbl { font-size: 10px; color: #4a4870; margin-top: 2px; }
+  .divider { width: 1px; background: #1e1c33; }
+  .npm-badge {
+    margin-top: 14px; padding: 8px 12px;
+    background: #cc000022; border: 1px solid #cc000044;
+    border-radius: 6px; font-size: 11px; color: #ff6b6b;
+    text-align: center;
+  }
+  .gh-badge {
+    margin-top: 8px; padding: 8px 12px;
+    background: #ffffff08; border: 1px solid #ffffff14;
+    border-radius: 6px; font-size: 11px; color: #7a7895;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+  <div class="top-bar"></div>
+  <div class="left-bar"></div>
+
+  <div class="card">
+    <div class="card-top"></div>
+    <div class="header">
+      <div class="logo-row">
+        <div class="logo">🐍</div>
+        <div class="pkg-name">pi-odoo-<span>workflow</span></div>
+      </div>
+      <div class="pkg-desc">Odoo 18/19 development workflow — auto-detects modules, enforces quality, adds /slash commands</div>
+      <div class="badges">
+        <span class="badge badge-odoo">Odoo 18 &amp; 19</span>
+        <span class="badge badge-pi">pi-package</span>
+        <span class="badge badge-ts">TypeScript Extensions</span>
+      </div>
+    </div>
+
+    <div class="body">
+      <!-- LEFT -->
+      <div class="left">
+        <div class="section-label">10 Slash Commands</div>
+
+        <div class="cmd"><div class="cmd-pill green">/odoo-module</div><div class="cmd-desc">Scaffold completo</div></div>
+        <div class="cmd"><div class="cmd-pill green">/odoo-model</div><div class="cmd-desc">Modelo + vistas + tests</div></div>
+        <div class="cmd"><div class="cmd-pill green">/odoo-wizard</div><div class="cmd-desc">TransientModel completo</div></div>
+        <div class="cmd"><div class="cmd-pill yellow">/odoo-report</div><div class="cmd-desc">QWeb PDF report</div></div>
+        <div class="cmd"><div class="cmd-pill yellow">/odoo-inherit</div><div class="cmd-desc">XPath inheritance</div></div>
+        <div class="cmd"><div class="cmd-pill yellow">/odoo-cron</div><div class="cmd-desc">Scheduled action</div></div>
+        <div class="cmd"><div class="cmd-pill blue">/odoo-test</div><div class="cmd-desc">Genera tests pendientes</div></div>
+        <div class="cmd"><div class="cmd-pill blue">/odoo-review</div><div class="cmd-desc">Auditoría completa</div></div>
+        <div class="cmd"><div class="cmd-pill red">/odoo-migrate</div><div class="cmd-desc">v17→v18 / v18→v19</div></div>
+        <div class="cmd"><div class="cmd-pill red">/odoo-debug</div><div class="cmd-desc">Diagnóstico de errores</div></div>
+      </div>
+
+      <!-- MIDDLE -->
+      <div class="middle">
+        <div class="section-label">Automatic Behaviors + Extensions</div>
+
+        <div class="feature">
+          <div class="dot teal"></div>
+          <div class="feat-text"><strong>Odoo Context Injector</strong> — detecta módulos al arrancar, inyecta modelos y XML IDs en el contexto</div>
+        </div>
+        <div class="feature">
+          <div class="dot teal"></div>
+          <div class="feat-text"><strong>XML-ID Finder</strong> — busca en tu Odoo local o en GitHub odoo/odoo</div>
+        </div>
+        <div class="feature">
+          <div class="dot green"></div>
+          <div class="feat-text"><strong>Tests automáticos</strong> — genera y actualiza tests en cada cambio</div>
+        </div>
+        <div class="feature">
+          <div class="dot green"></div>
+          <div class="feat-text"><strong>Manifest version bump</strong> — actualiza la versión del módulo en cada modificación</div>
+        </div>
+        <div class="feature">
+          <div class="dot green"></div>
+          <div class="feat-text"><strong>Traducciones</strong> — verifica _() en cada string visible por el usuario</div>
+        </div>
+        <div class="feature">
+          <div class="dot yellow"></div>
+          <div class="feat-text"><strong>Explica antes de codificar</strong> — WHY antes de HOW, siempre</div>
+        </div>
+        <div class="feature">
+          <div class="dot yellow"></div>
+          <div class="feat-text"><strong>Guías de migración</strong> — cambios v17→v18 y v18→v19 con before/after</div>
+        </div>
+        <div class="feature">
+          <div class="dot purple"></div>
+          <div class="feat-text"><strong>OWL patterns</strong> — patch(), custom widgets, services, assets</div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="right">
+        <div class="section-label">Install</div>
+
+        <div class="install-box">
+          <div class="install-label">npm / pi</div>
+          <div class="install-cmd"><span>pi</span> install npm:pi-odoo-workflow</div>
+        </div>
+        <div class="install-box">
+          <div class="install-label">npx / Claude Code</div>
+          <div class="install-cmd"><span>npx</span> skills add EdgarNaranjo/agent-skills -g -y</div>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-num">10</div>
+            <div class="stat-lbl">Prompts</div>
+          </div>
+          <div class="divider"></div>
+          <div class="stat">
+            <div class="stat-num">7</div>
+            <div class="stat-lbl">Refs</div>
+          </div>
+          <div class="divider"></div>
+          <div class="stat">
+            <div class="stat-num">2</div>
+            <div class="stat-lbl">Extensions</div>
+          </div>
+        </div>
+
+        <div class="npm-badge">npm · pi-odoo-workflow</div>
+        <div class="gh-badge">EdgarNaranjo/agent-skills</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
