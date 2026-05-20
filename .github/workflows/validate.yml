@@ -1,0 +1,84 @@
+name: Validate Package
+
+on:
+  push:
+    branches: [main, workflow-odoo19]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate package.json
+        run: |
+          node -e "
+            const pkg = require('./package.json');
+            if (!pkg.keywords.includes('pi-package')) throw new Error('Missing pi-package keyword');
+            if (!pkg.pi.skills) throw new Error('Missing pi.skills');
+            if (!pkg.pi.prompts) throw new Error('Missing pi.prompts');
+            if (!pkg.pi.extensions) throw new Error('Missing pi.extensions');
+            if (!pkg.name) throw new Error('Missing name');
+            if (!pkg.version) throw new Error('Missing version');
+            console.log('✅ package.json válido — ' + pkg.name + '@' + pkg.version);
+          "
+
+      - name: Validate SKILL.md frontmatter
+        run: |
+          python3 -c "
+          import re, sys
+          with open('skills/workflow-odoo19/SKILL.md') as f:
+              content = f.read()
+          if not re.match(r'^---\n.*name:.*\n.*description:.*\n---', content, re.DOTALL):
+              print('❌ SKILL.md: invalid frontmatter'); sys.exit(1)
+          print('✅ SKILL.md frontmatter válido')
+          "
+
+      - name: Validate internal references exist
+        run: |
+          python3 -c "
+          import re, os, sys
+          with open('skills/workflow-odoo19/SKILL.md') as f:
+              content = f.read()
+          links = re.findall(r'\[.*?\]\(([^)]+\.md)\)', content)
+          errors = []
+          for link in links:
+              path = 'skills/workflow-odoo19/' + link
+              if not os.path.exists(path):
+                  errors.append('❌ MISSING: ' + path)
+          if errors:
+              print('\n'.join(errors)); sys.exit(1)
+          print('✅ ' + str(len(links)) + ' referencias internas OK')
+          "
+
+      - name: Validate prompt templates
+        run: |
+          python3 -c "
+          import os, re, sys
+          errors = []
+          prompts = [f for f in os.listdir('prompts') if f.endswith('.md')]
+          for f in prompts:
+              content = open('prompts/' + f).read()
+              if not re.match(r'^---\n.*description:', content, re.DOTALL):
+                  errors.append('❌ MISSING description: ' + f)
+          if errors:
+              print('\n'.join(errors)); sys.exit(1)
+          print('✅ ' + str(len(prompts)) + ' prompt templates OK')
+          "
+
+      - name: Validate TypeScript extensions
+        run: |
+          node --input-type=module << 'EOF'
+          import { readFileSync } from 'fs';
+          const files = ['extensions/odoo-context.ts', 'extensions/odoo-xmlid.ts'];
+          for (const f of files) {
+            const c = readFileSync(f, 'utf-8');
+            if (!c.includes('export default function')) 
+              throw new Error(f + ': missing export default function');
+            if (!c.includes('pi.registerTool')) 
+              throw new Error(f + ': missing registerTool');
+            console.log('✅ ' + f);
+          }
+          EOF

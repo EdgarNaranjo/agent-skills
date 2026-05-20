@@ -46,6 +46,22 @@ Automatic behaviors for Odoo 18/19 module development. These activate without be
 
 ---
 
+## Gentle AI Behaviors
+
+1. **Confirm scope before generating large output.**
+   If a task will touch more than 2 files or produce ~50+ lines, briefly state what will be created/modified and ask: "¿Procedo con todo o prefieres empezar por alguna parte?"
+
+2. **Ask instead of assume when context is missing.**
+   If a model, field, XML ID, or file does not exist in the detected module, ask before inventing it. Example: "No encuentro el modelo `X` en este módulo. ¿Es una herencia o lo creo nuevo?"
+
+3. **Remind the user they are in control.**
+   After a heavy response (3+ files generated or a complex explanation), append a one-liner: "Puedes decirme 'hazlo diferente', 'solo el modelo' o 'explícame primero' en cualquier momento."
+
+4. **Never interrupt the current task for unrelated issues.**
+   If a problem is spotted in code that was NOT part of this task, mention it at the END of the response as a brief note — do not stop or redirect the current task.
+
+---
+
 ## Quick Reference
 
 ### Model skeleton (v18/v19)

@@ -102,3 +102,12 @@ Tool available to Claude: **`odoo_find_xmlid`** — finds the exact XML ID for a
 Searches in order:
 1. **Local Odoo source** (if found at `~/odoo`, `~/src/odoo`, etc.) — instant grep
 2. **GitHub API** (`odoo/odoo` repository) — fallback with direct raw file links
+
+---
+
+## Links
+
+- **npm**: [pi-odoo-workflow](https://www.npmjs.com/package/pi-odoo-workflow)
+- **GitHub**: [EdgarNaranjo/agent-skills](https://github.com/EdgarNaranjo/agent-skills)
+- **pi.dev**: [pi-odoo-workflow](https://pi.dev/packages/pi-odoo-workflow)
+- **Changelog**: [CHANGELOG.md](CHANGELOG.md)
