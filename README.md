@@ -41,6 +41,7 @@ Type `/command` in pi to expand into full instructions:
 | `/odoo-test` | Scans existing code and generates/updates tests for uncovered methods |
 | `/odoo-review` | Full audit: structure, APIs, translations, tests, security — with ✅/⚠️/❌ |
 | `/odoo-migrate` | Migrates module between versions (v17→v18 or v18→v19) |
+| `/odoo-qa` | QA tester — validates implementation against spec, generates functional summary and APPROVED/REJECTED verdict |
 
 ## Install
 
