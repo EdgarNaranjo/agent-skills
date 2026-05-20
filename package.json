@@ -1,7 +1,7 @@
 {
   "name": "pi-odoo-workflow",
-  "version": "1.2.0",
-  "description": "Odoo 18/19 development workflow for pi coding agent — auto-detects modules, enforces quality automatically, and adds /slash commands for common tasks",
+  "version": "1.2.1",
+  "description": "Odoo 18/19 module development for pi and Claude Code — auto-detects your modules and injects context, finds XML IDs in local source or GitHub, and scaffolds models, views, wizards, reports, tests and migrations with 10 /odoo-* slash commands. Includes TypeScript extensions. Works standalone or alongside unclecatvn/agent-skills.",
   "keywords": [
     "pi-package",
     "odoo",

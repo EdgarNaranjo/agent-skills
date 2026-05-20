@@ -1,6 +1,6 @@
 ---
 name: workflow-odoo19
-description: "Use when developing Odoo 18 or 19 modules — triggers automatic version confirmation, structure verification, test generation, translation checks, and explanations before every code change."
+description: "Use when developing, reviewing, debugging or migrating Odoo 18 or 19 modules. Use before writing any model, view, wizard, report, controller, cron or OWL component."
 ---
 
 # workflow-odoo19
