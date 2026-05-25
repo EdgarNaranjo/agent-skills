@@ -6,6 +6,46 @@ Format: [Semantic Versioning](https://semver.org) — `MAJOR.MINOR.PATCH`
 
 ---
 
+## [1.4.1] — 2026-05-20
+
+### Fixed
+- `CHANGELOG.md` added to npm `files` — was missing from published package, causing broken jsdelivr link
+- Added `pi.changelog` field in `package.json` pointing directly to GitHub instead of jsdelivr CDN
+
+---
+
+## [1.4.0] — 2026-05-20
+
+### Changed
+- **Skill renamed** from `workflow-odoo19` to `workflow-odoo` — covers both v18 and v19, the `19` suffix was misleading
+- Folder moved from `skills/workflow-odoo19/` to `skills/workflow-odoo/`
+- Updated install commands, README references, and CI/CD workflow accordingly
+
+### Added
+- **Workload risk assessment** (Harness #18) in `workflow-odoo` skill:
+  - 3-level risk table: 🟢 Low / 🟡 Medium / 🟥 High based on file count, line count, and areas touched
+  - Areas counted separately: `models/`, `views/`, `security/`, `tests/`, `wizards/`, `reports/`, `controllers/`
+  - At 🟥 High risk: pauses, lists what will change, recommends splitting
+- **Evidence gate in `/odoo-qa`** (Harness #12):
+  - New Step 5 — asks for test command and output before issuing verdict
+  - New verdict: `🕐 PENDING` — code looks good but no test evidence provided
+  - `✅ APPROVED` now requires confirmed passing tests, not just static review
+- **Session memory** (Harness #10) — opt-in `ODOO_SESSION.md`:
+  - Offered once at session start; never asked again if declined
+  - Tracks: Odoo version, decisions taken, files changed, pending risks
+- **`/odoo-plan` prompt** (Harness #6) — structured planning for large features:
+  - 5 phases: Explore → Propose → Spec → Design → Tasks
+  - Each phase requires user confirmation before proceeding
+  - Any phase can be skipped with "saltamos esta fase"
+  - Saves plan to `docs/ODOO_PLAN_<feature>.md` and hands off to existing prompts
+  - Registered in README command table
+- **UI language confirmation** on first interaction:
+  - Asks once: what language for user-visible labels? (default: English)
+  - Code structure, technical names, comments → always English
+  - `string=`, `help=`, menu labels, button labels → user’s chosen language
+
+---
+
 ## [1.2.0] — 2026-05-20
 
 ### Added

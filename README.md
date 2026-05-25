@@ -4,7 +4,7 @@
 
 ## What it does
 
-### 🧠 Skill: `workflow-odoo19`
+### 🧠 Skill: `workflow-odoo`
 
 Loaded automatically when working on Odoo code. Claude will — without being asked:
 
@@ -41,13 +41,14 @@ Type `/command` in pi to expand into full instructions:
 | `/odoo-test` | Scans existing code and generates/updates tests for uncovered methods |
 | `/odoo-review` | Full audit: structure, APIs, translations, tests, security — with ✅/⚠️/❌ |
 | `/odoo-migrate` | Migrates module between versions (v17→v18 or v18→v19) |
-| `/odoo-qa` | QA tester — validates implementation against spec, generates functional summary and APPROVED/REJECTED verdict |
+| `/odoo-plan <feature>` | Plans a complex feature through structured phases: explore → propose → spec → design → tasks. Use before `/odoo-model` or `/odoo-wizard` for large work |
+| `/odoo-qa` | QA tester — validates implementation against spec, generates functional summary and APPROVED/REJECTED/PENDING verdict |
 
 ## Install
 
 ```bash
 # Con npx (recomendado — compatible con pi y Claude Code)
-npx skills add EdgarNaranjo/agent-skills@workflow-odoo19 -g -y
+npx skills add EdgarNaranjo/agent-skills@workflow-odoo -g -y
 
 # Con pi desde npm
 pi install npm:pi-odoo-workflow
@@ -56,7 +57,7 @@ pi install npm:pi-odoo-workflow
 pi install git:github.com/EdgarNaranjo/agent-skills
 
 # Probar sin instalar
-pi -e git:github.com/EdgarNaranjo/agent-skills@workflow-odoo19
+pi -e git:github.com/EdgarNaranjo/agent-skills@workflow-odoo
 ```
 
 ## What makes this different

@@ -1,9 +1,9 @@
 ---
-name: workflow-odoo19
+name: workflow-odoo
 description: "Use when developing, reviewing, debugging or migrating Odoo 18 or 19 modules. Use before writing any model, view, wizard, report, controller, cron or OWL component."
 ---
 
-# workflow-odoo19
+# workflow-odoo
 
 Automatic behaviors for Odoo 18/19 module development. These activate without being asked.
 
@@ -16,40 +16,58 @@ Automatic behaviors for Odoo 18/19 module development. These activate without be
 1. **Confirm Odoo version on first interaction.**
    When the user sends their first message, if the target version (18 or 19) is not already known, ask before writing any code. Do NOT ask proactively before the user writes anything. Store the answer and never ask again in the same session.
 
-2. **Check module structure before changes.**
+2. **Confirm UI language on first interaction.**
+   On the first message, also ask: "What language should user-visible labels be in? (e.g. English, Spanish, French — default: English)"
+   Store the answer and never ask again in the same session.
+
+   Apply consistently:
+   - **Always English:** field technical names, method names, variable names, XML IDs, code comments, `_description`, `_name`, file names.
+   - **User's chosen language:** `string=` attributes, `help=` texts, menu item labels, button labels, report titles, wizard titles, selection values shown to users.
+
+   If no language is specified, default to English for everything.
+
+3. **Check module structure before changes.**
    Before touching any file, scan the module layout: `__manifest__.py`, `models/__init__.py`, `views/`, `security/`, `i18n/`, `tests/`. Note what exists and what is missing.
 
-3. **Explain the approach before writing code.**
+4. **Explain the approach before writing code.**
    State in one short paragraph: what you are about to do, why, and what alternatives exist. If a better pattern is available for the detected Odoo version, say so explicitly and let the user choose.
 
-4. **Write unit tests for every new method or feature.**
+5. **Write unit tests for every new method or feature.**
    Place tests in `tests/test_<model>.py`. Use `@tagged('post_install', '-at_install')` unless the feature is install-time only. Use `setUpClass()` for shared fixtures, `setUp()` only for per-test state. Assert specific values, not just "no exception raised".
 
-5. **Update existing tests when modifying existing code.**
+6. **Update existing tests when modifying existing code.**
    If a change alters behavior, method signature, or field names, find and update all affected test cases in the same response. Never leave tests in a broken state.
 
-6. **Check translations after every UI-facing change.**
+7. **Check translations after every UI-facing change.**
    Every string shown to users must be wrapped in `_()`. Import with `from odoo import _`. After adding or changing translatable strings, note that `.pot`/`.po` files should be regenerated with `i18n/` updated.
 
-7. **Verify structure after changes.**
+8. **Verify structure after changes.**
    After writing or editing files, confirm: the file is listed in `__manifest__.py` (`data`, `demo`, or `assets` as appropriate), `__init__.py` imports are correct, and security records exist for new models.
 
-8. **Bump the module version in `__manifest__.py` on every change.**
+9. **Bump the module version in `__manifest__.py` on every change.**
    Every time a module is modified, increment the version following Odoo's format `{odoo}.{major}.{minor}.{patch}.{hotfix}`:
    - Bug fix / small correction → bump `patch` (e.g. `19.0.1.0.0` → `19.0.1.1.0`)
    - New feature / new field or view → bump `minor` (e.g. `19.0.1.0.0` → `19.0.2.0.0`)
    - Breaking change / data migration needed → bump `major` (e.g. `19.0.1.0.0` → `19.0.2.0.0` with migration script)
    Always show the old and new version in your response. Never leave a modified module at the same version.
 
-9. **Apply version-correct patterns automatically.**
+10. **Apply version-correct patterns automatically.**
    Use the detected version to select the right API. Do not mix v16 patterns into v18/v19 code. When unsure, flag it and show both options.
 
 ---
 
 ## Gentle AI Behaviors
 
-1. **Confirm scope before generating large output.**
-   If a task will touch more than 2 files or produce ~50+ lines, briefly state what will be created/modified and ask: "¿Procedo con todo o prefieres empezar por alguna parte?"
+1. **Assess workload risk before generating large output.**
+   Before writing any code, estimate the scope and assign a risk level:
+
+   | Risk | Triggers | Action |
+   |------|----------|--------|
+   | 🟢 Low | ≤2 files, ≤80 lines, single area | Proceed directly |
+   | 🟡 Medium | 3–5 files OR 80–200 lines OR 2 areas (e.g. model + view) | State scope, ask: "¿Procedo con todo o prefieres empezar por alguna parte?" |
+   | 🔴 High | 6+ files OR 200+ lines OR 3+ areas (model + view + security + tests) | Pause. List what will change, flag the risk, recommend splitting into smaller steps |
+
+   Areas counted separately: `models/`, `views/`, `security/`, `tests/`, `wizards/`, `reports/`, `controllers/`.
 
 2. **Ask instead of assume when context is missing.**
    If a model, field, XML ID, or file does not exist in the detected module, ask before inventing it. Example: "No encuentro el modelo `X` en este módulo. ¿Es una herencia o lo creo nuevo?"
@@ -62,97 +80,42 @@ Automatic behaviors for Odoo 18/19 module development. These activate without be
 
 ---
 
-## Quick Reference
+## Session Memory (optional)
 
-### Model skeleton (v18/v19)
+At the start of the first interaction, offer session tracking once:
 
-```python
-from odoo import _, api, fields, models
+> "¿Quieres que lleve un registro de esta sesión? Crearé un `ODOO_SESSION.md` con las decisiones tomadas, cambios aplicados y riesgos pendientes. (sí / no)"
 
+- If the user says **yes** → create or read `ODOO_SESSION.md` in the module root and keep it updated throughout the session.
+- If the user says **no** → never mention it again.
+- Do NOT ask again in the same session regardless of the answer.
 
-class MyModel(models.Model):
-    _name = "my.model"
-    _description = "My Model"
-    _rec_name = "name"
-    _rec_names_search = ["name", "ref"]  # replaces name_search() override
+When active, update `ODOO_SESSION.md` after each significant action:
 
-    name = fields.Char(string="Name", required=True)
-    ref = fields.Char(string="Reference")
+```markdown
+# ODOO_SESSION.md
 
-    # v19: use _compute_display_name instead of name_get()
-    # def _compute_display_name(self):
-    #     for rec in self:
-    #         rec.display_name = f"[{rec.ref}] {rec.name}"
+## Session info
+- Date: <today>
+- Odoo version: <18 or 19>
+- Module: <module name>
 
-    @api.model_create_multi          # required in v19; valid in v18
-    def create(self, vals_list):
-        for vals in vals_list:
-            # pre-processing
-            pass
-        return super().create(vals_list)
+## Decisions
+- <decision taken and why>
+
+## Changes applied
+- <file>: <what changed>
+
+## Pending risks
+- <risk or open question>
 ```
-
-### View snippet — use `<list>`, not `<tree>` (v17+)
-
-```xml
-<record id="view_my_model_list" model="ir.ui.view">
-    <field name="name">my.model.list</field>
-    <field name="model">my.model</field>
-    <field name="arch" type="xml">
-        <list>
-            <field name="name"/>
-            <field name="ref"/>
-        </list>
-    </field>
-</record>
-```
-
-### Manifest version format
-
-```python
-# __manifest__.py
-{
-    "name": "My Module",
-    "version": "18.0.1.0.0",   # or "19.0.1.0.0"
-    "depends": ["base"],
-    "data": [
-        "security/ir.model.access.csv",
-        "views/my_model_views.xml",
-    ],
-    "installable": True,
-    "license": "LGPL-3",
-}
-```
-
-### Access CSV format
-
-```csv
-id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_my_model_user,my.model user,model_my_model,base.group_user,1,1,1,0
-access_my_model_manager,my.model manager,model_my_model,base.group_system,1,1,1,1
-```
-
----
-
-## Common Mistakes
-
-| Mistake | Correct pattern |
-|---|---|
-| Overriding `name_search()` | Use `_rec_names_search = [...]` on the model |
-| `<tree>` tag in views | `<list>` (required since v17) |
-| `selection_add` without `ondelete` | Always add `ondelete={"value": "cascade"}` (or desired action) |
-| `from odoo.tools.translate import _` | `from odoo import _` |
-| Test class with no `@tagged` | Add `@tagged('post_install', '-at_install')` |
-| `setUp()` for shared DB fixtures | Use `setUpClass()` — `setUp()` runs before every test method |
-| Hardcoded user-visible strings | Wrap in `_("...")` |
-| Version `1.0.0` or `18.1.0` in manifest | Must follow `18.0.x.y.z` / `19.0.x.y.z` format |
-| New XML file not listed in manifest `data` | Every view/data file must appear in `data` or `demo` |
-| `name_get()` override in v19 | Override `_compute_display_name()` instead |
-| `@api.model def create(self, vals)` in v19 | Must be `@api.model_create_multi` with `vals_list` |
 
 ---
 
 ## References
+
+- [quick-reference.md](quick-reference.md) — model skeleton, view snippets, manifest format, common mistakes
+- [module-structure.md](module-structure.md) — canonical directory layout and checklist
 
 - [module-structure.md](module-structure.md) — canonical directory layout and checklist
 - [v18-changes.md](v18-changes.md) — API changes introduced in Odoo 18

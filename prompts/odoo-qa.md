@@ -98,7 +98,26 @@ Run these checks regardless of what the spec says:
 
 ---
 
-## Step 5 — Validation report
+## Step 5 — Evidence gate
+
+Before writing the validation report, ask the user for test evidence:
+
+> "Before issuing a verdict, I need to know: did you run the tests? If yes, paste the command you used and the output."
+
+Evaluate the response:
+
+| Evidence provided | Effect on verdict |
+|---|---|
+| Test command + output (all passing) | APPROVED is available |
+| Test command + output (some failing) | REJECTED — list failing tests as critical |
+| "I didn't run tests" or no response | Verdict is locked to PENDING — do NOT issue APPROVED |
+| No tests exist in the module | Flag as critical finding — verdict cannot be APPROVED |
+
+Do not skip this step even if the code looks correct. A passing static review is not evidence.
+
+---
+
+## Step 6 — Validation report
 
 Produce this structured report:
 
@@ -145,11 +164,12 @@ What does the module do? What can users do with it? What changed?>
 
 ## 4. Verdict
 
-☐ ✅ APPROVED — implementation matches spec, no critical issues
+☐ ✅ APPROVED — implementation matches spec, no critical issues, tests passed
 ☐ ❌ REJECTED — X critical issues must be fixed before sign-off
 ☐ ⚠️ CONDITIONAL — approved with minor pending items listed above
+☐ 🕐 PENDING — code review complete but no test evidence provided yet
 
-**To sign off:** <list what must be fixed if not approved>
+**To sign off:** <list what must be fixed or confirmed if not approved>
 ```
 
 ---
@@ -161,4 +181,5 @@ What does the module do? What can users do with it? What changed?>
 - **Be specific.** "Missing translation" is not enough — say which string, which file.
 - **Check the details.** A Many2one field existing is not the same as having `no_create` options. Read the XML.
 - **If something is not in the spec** but looks wrong, flag it under Observations.
-- **The verdict must be earned.** ✅ APPROVED only when every critical item is confirmed.
+- **The verdict must be earned.** ✅ APPROVED only when every critical item is confirmed AND test evidence was provided.
+- **PENDING is not a failure.** It means the code looks good but tests haven't been run yet — instruct the user to run them and re-run `/odoo-qa`.
