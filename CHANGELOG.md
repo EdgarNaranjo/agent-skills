@@ -6,7 +6,7 @@ Format: [Semantic Versioning](https://semver.org) — `MAJOR.MINOR.PATCH`
 
 ---
 
-## [1.4.1] — 2026-05-20
+## [1.4.1] — 2026-05-25
 
 ### Fixed
 - `CHANGELOG.md` added to npm `files` — was missing from published package, causing broken jsdelivr link
@@ -14,7 +14,7 @@ Format: [Semantic Versioning](https://semver.org) — `MAJOR.MINOR.PATCH`
 
 ---
 
-## [1.4.0] — 2026-05-20
+## [1.4.0] — 2026-05-25
 
 ### Changed
 - **Skill renamed** from `workflow-odoo19` to `workflow-odoo` — covers both v18 and v19, the `19` suffix was misleading
@@ -46,7 +46,7 @@ Format: [Semantic Versioning](https://semver.org) — `MAJOR.MINOR.PATCH`
 
 ---
 
-## [1.2.0] — 2026-05-20
+## [1.2.0] — 2026-05-25
 
 ### Added
 - **Gentle AI behaviors** in `workflow-odoo19` skill:
@@ -63,7 +63,7 @@ Format: [Semantic Versioning](https://semver.org) — `MAJOR.MINOR.PATCH`
 
 ---
 
-## [1.1.6] — 2026-05-20
+## [1.1.6] — 2026-05-24
 
 ### Fixed
 - Removed `assets/` from npm package (image served from GitHub raw URL)
@@ -71,14 +71,14 @@ Format: [Semantic Versioning](https://semver.org) — `MAJOR.MINOR.PATCH`
 
 ---
 
-## [1.1.5] — 2026-05-20
+## [1.1.5] — 2026-05-23
 
 ### Added
 - Preview image for pi.dev gallery
 
 ---
 
-## [1.1.4] — 2026-05-20
+## [1.1.4] — 2026-05-23
 
 ### Fixed
 - Respond in Spanish when user writes in Spanish
@@ -86,28 +86,28 @@ Format: [Semantic Versioning](https://semver.org) — `MAJOR.MINOR.PATCH`
 
 ---
 
-## [1.1.3] — 2026-05-20
+## [1.1.3] — 2026-05-22
 
 ### Fixed
 - Do not ask Odoo version proactively before user writes anything
 
 ---
 
-## [1.1.2] — 2026-05-20
+## [1.1.2] — 2026-05-22
 
 ### Fixed
 - Never respond in French; default to user's language
 
 ---
 
-## [1.1.1] — 2026-05-20
+## [1.1.1] — 2026-05-21
 
 ### Fixed
 - Correct install commands in README (`agent-skills` not `pi-odoo-workflow`)
 
 ---
 
-## [1.1.0] — 2026-05-20
+## [1.1.0] — 2026-05-21
 
 ### Added
 - Default behavior: bump `__manifest__.py` version on every module change
