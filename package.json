@@ -1,6 +1,6 @@
 {
   "name": "pi-odoo-workflow",
-  "version": "1.12.0",
+  "version": "1.12.1",
   "description": "Odoo 18/19 module development for pi and Claude Code — auto-detects your modules, finds XML IDs, and scaffolds models, views, wizards, reports, controllers, OWL components, tests and migrations with 15 /odoo-* slash commands. Includes TypeScript extensions. Works standalone or alongside unclecatvn/agent-skills.",
   "keywords": [
     "pi-package",

@@ -6,6 +6,14 @@ Format: [Semantic Versioning](https://semver.org) — `MAJOR.MINOR.PATCH`
 
 ---
 
+## [1.12.1] — 2026-05-28
+
+### Fixed
+- README: add preview image
+- README: remove deleted `@workflow-odoo` branch from `pi -e` and `npx skills add` install commands
+
+---
+
 ## [1.12.0] — 2026-05-28
 
 ### Added — Nuevos prompts + fixes finales para alcanzar 9.6/10
