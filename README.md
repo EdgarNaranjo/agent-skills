@@ -2,6 +2,8 @@
 
 > Odoo 18/19 development workflow for [pi coding agent](https://pi.dev) — stops you from repeating the same Odoo context on every message. The skill tells Claude how to behave automatically: what to check, what to generate, and what to never skip.
 
+![pi-odoo-workflow preview](https://raw.githubusercontent.com/EdgarNaranjo/agent-skills/main/assets/preview.png)
+
 ## Works with
 
 | Feature | pi | Claude Code |
