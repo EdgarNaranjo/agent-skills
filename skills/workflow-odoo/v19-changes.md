@@ -5,8 +5,41 @@ Reference for migrating or developing modules targeting Odoo 19.
 ## Requirements
 
 - **Python 3.12+** required (v18 required 3.10+)
-- **PostgreSQL 15+** required
+- **PostgreSQL 14+** required (PostgreSQL 15+ recommended for best performance)
 - **Node.js 18+** required (for assets compilation)
+
+---
+
+## Python 3.12 Breaking Changes
+
+### `datetime.utcnow()` deprecated
+
+```python
+# ❌ deprecated in Python 3.12 — raises DeprecationWarning
+from datetime import datetime
+now = datetime.utcnow()
+
+# ✅ preferred in Odoo context
+now = fields.Datetime.now()  # returns naive UTC datetime
+
+# ✅ if you need Python stdlib
+from datetime import datetime, timezone
+now = datetime.now(timezone.utc).replace(tzinfo=None)  # naive UTC
+```
+
+### Removed standard library modules — cause `ModuleNotFoundError` at install
+
+| Module removed | Action |
+|---|---|
+| `distutils` | Use `setuptools` or remove if unused |
+| `cgi` | Use `urllib.parse` or `email.parser` |
+| `imghdr` | Check magic bytes manually or use `filetype` lib |
+| `cgitb` | Use `traceback` instead |
+| `aifc`, `sunau`, `audioop` | Remove if unused |
+| `pipes` | Use `subprocess` |
+| `telnetlib` | Use `asyncio` |
+
+These cause **hard import errors** that prevent the module from loading. Scan all `.py` files for these imports before upgrading.
 
 ---
 
@@ -38,24 +71,47 @@ def name_get(self):
     return [(rec.id, f"[{rec.ref}] {rec.name}") for rec in self]
 
 # ✅ v19
+@api.depends('ref', 'name')  # @api.depends is mandatory — without it, display_name never updates
 def _compute_display_name(self):
     for rec in self:
         rec.display_name = f"[{rec.ref}] {rec.name}"
 ```
 
+**Remove any explicit `display_name` field declaration.** In v19 `display_name` is a built-in computed field on `models.Model`. Declaring it explicitly causes an ORM conflict:
+
+```python
+# ❌ conflicts with the built-in in v19 — remove this line
+display_name = fields.Char(compute='_compute_display_name', store=True)
+```
+
+If the field was declared with `store=True`, a database migration may be needed to drop the column.
+
 ### `read_group()` signature changed
 
 ```python
 # ❌ v18 positional args
-self.env["my.model"].read_group(domain, fields, groupby, offset=0, limit=None)
+result = self.env["my.model"].read_group(domain, fields, groupby, offset=0, limit=None)
+# Old result: list of dicts
+for group in result:
+    partner = group['partner_id']      # (id, display_name) tuple
+    total   = group['amount_total']    # float
+    count   = group['partner_id_count']  # int
 
 # ✅ v19 — all args after domain must be keyword
-self.env["my.model"]._read_group(
+result = self.env["my.model"]._read_group(
     domain=[],
-    groupby=["state"],
-    aggregates=["id:count"],
+    groupby=["partner_id"],
+    aggregates=["amount_total:sum", "__count"],
 )
+# New result: list of tuples in groupby + aggregates order
+for partner, amount_total, count in result:
+    # partner is a recordset (Many2one) — use partner.id, partner.display_name
+    # amount_total is a float
+    # count is an int
+    pass
 ```
+
+**Always update the consuming code.** Just renaming `read_group` to `_read_group` will cause `TypeError` or `KeyError` at runtime because the return structure changed completely.
 
 ---
 
@@ -70,6 +126,32 @@ self.env["my.model"]._read_group(
 <!-- ✅ required -->
 <list>...</list>
 ```
+
+### `view_mode` in actions: `tree` → `list`
+
+```xml
+<!-- ❌ v18 -->
+<field name="view_mode">tree,form</field>
+
+<!-- ✅ v19 -->
+<field name="view_mode">list,form</field>
+```
+
+### XPath expressions in inherited views must also be updated
+
+If a module inherits a view and uses XPath targeting `<tree>`, the XPath breaks at install time:
+
+```xml
+<!-- ❌ causes ValidationError at install -->
+<xpath expr="//tree[1]" position="inside">
+<xpath expr="//tree/field[@name='name']" position="before">
+
+<!-- ✅ correct -->
+<xpath expr="//list[1]" position="inside">
+<xpath expr="//list/field[@name='name']" position="before">
+```
+
+Search for `//tree` in all `expr="..."` attributes across every `.xml` file.
 
 ### `optional` attribute on list columns
 

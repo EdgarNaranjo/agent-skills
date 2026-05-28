@@ -144,6 +144,14 @@ Dialog-style form view with `<footer>` buttons — the standard pattern for wiza
 ```
 
 > **Note on `binding_model_id`:** Using it registers the wizard as an Action in the ⚙ Action menu of the target model's form. If you want a dedicated button instead (see below), you can remove `binding_model_id` and `binding_view_types`.
+>
+> **Deriving `<target_model_xmlid>`:** The ref follows the pattern `<defining_module>.model_<model_name_underscored>`.
+> The defining module is the one that declares `_name` for the model — **not always `base`**.
+> Examples:
+> - `sale.order` is defined in `sale` → `ref="sale.model_sale_order"`
+> - `fleet.vehicle` is defined in `fleet` → `ref="fleet.model_fleet_vehicle"`
+> - `res.partner` is defined in `base` → `ref="base.model_res_partner"` (rare exception)
+> For custom models you define yourself, use `ref="<your_module>.model_<model_name_underscored>"`.
 
 ---
 
@@ -182,6 +190,14 @@ from . import wizards
 
 ### UPDATE: Target model's form view XML
 
+> **If the target model belongs to a dependency module** (e.g. `sale.order` from `sale`, `fleet.vehicle` from `fleet`), do NOT modify the upstream view file directly. Create a new view XML file that inherits it instead:
+> ```xml
+> <record id="view_<target>_form_inherit_<module>" model="ir.ui.view">
+>     <field name="inherit_id" ref="<upstream_module>.<upstream_view_id>"/>
+>     ...
+> ```
+> Only modify a view file directly if it belongs to the current module.
+
 Add a button inside the `<header>` (status bar area) or in a `<sheet>` `<div class="oe_button_box">` that opens the wizard with `target="new"`.
 
 **Option A — Status bar button (common for state-machine models like sale.order):**
@@ -190,29 +206,12 @@ Add a button inside the `<header>` (status bar area) or in a `<sheet>` `<div cla
 <header>
     <!-- existing statusbar buttons ... -->
     <button
-        name="%(< xml_id_prefix>_action)d"
+        name="%(<xml_id_prefix>_action)d"
         string="<Button Label>"
         type="action"
         class="btn-secondary"
     />
 </header>
-```
-
-**Option B — Smart button in button box:**
-
-```xml
-<div class="oe_button_box" name="button_box">
-    <button
-        name="%(< xml_id_prefix>_action)d"
-        type="action"
-        class="oe_stat_button"
-        icon="fa-times-circle"
-    >
-        <div class="o_field_widget o_stat_info">
-            <span class="o_stat_text"><Button Label></span>
-        </div>
-    </button>
-</div>
 ```
 
 Show both options and ask the user which they prefer, then apply the right one to the correct view file.

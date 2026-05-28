@@ -106,7 +106,7 @@ def test_action_confirm_already_confirmed_raises(self):
 Always cover:
 1. Happy path (expected successful outcome)
 2. At least one validation/error path using `self.assertRaises(ValidationError)` or `self.assertRaises(UserError)`
-3. Edge cases (empty recordset, zero values, boundary dates, etc.) where relevant
+3. Edge cases (empty recordset, zero values, boundary dates, etc.) — for methods that call `search()`, **always test the zero-result path** (verify it handles no matches gracefully without raising).
 
 **`@api.constrains` methods:**
 The test MUST actually trigger the constraint (i.e. create or write a record that violates the constraint and assert the error is raised). Do not merely call the method directly.
@@ -122,19 +122,33 @@ def test_check_date_range_invalid(self):
 ```
 
 **`_compute_*` fields:**
-Test that the value recomputes correctly when its dependencies change.
+Test that the value recomputes correctly when its dependencies change. **Write one test per branch** — if the compute method has `if/elif/else` conditions, each branch needs a test case. For numeric thresholds, always test the exact boundary from both sides. For **compound conditions** (`if A and B`), also test the partial case where only one condition is true (e.g. A=True, B=False):
 
 ```python
-def test_compute_total_updates_on_line_change(self):
-    """total_amount recomputes when a line is added."""
-    self.assertEqual(self.record.total_amount, 0.0)
-    self.env['my.model.line'].create({
-        'order_id': self.record.id,
-        'price': 100.0,
-        'qty': 2,
-    })
-    self.assertEqual(self.record.total_amount, 200.0)
+# Example: _compute_efficiency_class with conditions > 10000, > 5000, else
+def test_compute_efficiency_high(self):
+    self.vehicle.km_logged = 15000.0
+    self.assertEqual(self.vehicle.efficiency_class, 'high')
+
+def test_compute_efficiency_medium(self):
+    self.vehicle.km_logged = 7500.0
+    self.assertEqual(self.vehicle.efficiency_class, 'medium')
+
+def test_compute_efficiency_boundary_5000(self):
+    """Exactly 5000 is NOT > 5000 — should be 'low', not 'medium'."""
+    self.vehicle.km_logged = 5000.0
+    self.assertEqual(self.vehicle.efficiency_class, 'low')
+
+def test_compute_efficiency_boundary_5001(self):
+    self.vehicle.km_logged = 5001.0
+    self.assertEqual(self.vehicle.efficiency_class, 'medium')
+
+def test_compute_efficiency_low(self):
+    self.vehicle.km_logged = 0.0
+    self.assertEqual(self.vehicle.efficiency_class, 'low')
 ```
+
+For non-relational dependencies (field on the same record), write directly to the field and assert the compute result. For relational dependencies (child records), create/modify the child record as in the example below:
 
 **`_onchange_*` methods:**
 Simulate the onchange by calling it directly on a new (unsaved) record and asserting side effects.
@@ -146,6 +160,13 @@ def test_onchange_partner_sets_currency(self):
     record._onchange_partner_id()
     self.assertEqual(record.currency_id, self.partner.currency_id)
 ```
+
+**Recommended helpers (use these instead of multiple assertEqual calls):**
+
+- `assertRecordValues(records, [{'field': value, ...}])` — compare multiple fields in one assertion; more readable and better error messages than chained `assertEqual`
+- `odoo.tests.Form(env['model.name'])` — triggers `@api.onchange` automatically, simulates real user interaction; use instead of calling `_onchange_*` directly
+- `.with_user(user)` — test permission boundaries without `sudo()`; always test what a regular user CAN and CANNOT do
+- `unittest.mock.patch` — mock `fields.Datetime.now()`, email sending, external API calls
 
 **Controllers:**
 For HTTP controllers, use `HttpCase` instead of `TransactionCase` and use `self.url_open()` or `self.authenticate()` + requests.
@@ -162,6 +183,40 @@ from . import test_my_wizard
 ```
 
 Write the updated file back.
+
+---
+
+**Migration script tests (`migrations/` folder):**
+Migration scripts need their own test strategy. Since they run during upgrade, test them by:
+
+```python
+# tests/test_migration_<version>.py
+from odoo.tests import tagged
+from odoo.tests.common import TransactionCase
+
+
+@tagged('post_install', '-at_install')
+class TestMigration(TransactionCase):
+    """Test that migration scripts produce the expected data state."""
+
+    def test_field_rename_preserved_data(self):
+        """After migration, renamed field contains the original data."""
+        # Create data that simulates pre-migration state
+        record = self.env['my.model'].create({'new_field_name': 'test value'})
+        # Verify the field has data (migration should have preserved it)
+        self.assertEqual(record.new_field_name, 'test value')
+
+    def test_xml_id_rename(self):
+        """After XML ID rename, the new ID resolves correctly."""
+        record = self.env.ref('my_module.new_action_name', raise_if_not_found=False)
+        self.assertIsNotNone(record, "Renamed XML ID should be resolvable")
+        self.assertFalse(
+            self.env.ref('my_module.old_action_name', raise_if_not_found=False),
+            "Old XML ID should no longer exist"
+        )
+```
+
+Note: migration scripts themselves cannot be unit-tested in isolation — test the **end state** after upgrade, not the script. Run with `./odoo-bin -u my_module -d testdb` and then execute the test suite.
 
 ---
 

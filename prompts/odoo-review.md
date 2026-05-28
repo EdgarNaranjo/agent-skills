@@ -83,12 +83,18 @@ Evaluate each area below. Use these markers for every finding:
 
 | Check | Pass condition |
 |---|---|
+| `_name` and `_description` present | Every new model has `_name`, `_description`, and `_order` |
+| `active` field on archivable models | Models intended to be archived have `active = fields.Boolean(default=True)` |
 | `ensure_one()` called | Methods that operate on a single record call `self.ensure_one()` at the start |
 | No ORM calls in loops | No `create()`, `write()`, `unlink()`, or `search()` inside a `for` loop — use batch operations |
 | `@api.constrains` raises `ValidationError` | Constraint methods import and raise `odoo.exceptions.ValidationError`, not `UserError` |
 | `selection_add` has `ondelete` | Every `selection_add` on an inherited selection field includes an `ondelete` dict |
 | No raw SQL without `%s` params | No string interpolation in `self.env.cr.execute()` calls |
 | `copy()` not overridden (v18+) | Use `copy_data()` instead of overriding `copy()` |
+| `@api.depends` on every `_compute_*` | Every method starting with `_compute_` has a non-empty `@api.depends(...)` decorator — a missing `@api.depends` causes the field to never recompute (silent bug) |
+| `fields.Html` uses `sanitize=True` | Any `fields.Html` field must have `sanitize=True` (default) — `sanitize=False` is an XSS risk and requires justification |
+| `@api.constrains` not on `store=False` fields | `@api.constrains` on a computed field with `store=False` is silently ignored — the constraint never runs. Only use `@api.constrains` on stored fields or `_sql_constraints`. |
+| `@api.depends_context` when using context in compute | If a `_compute_*` method reads from `self.env.context`, it must have `@api.depends_context('key1', 'key2')` — otherwise the cache doesn't invalidate when context changes |
 
 #### Version-specific checks
 
@@ -97,6 +103,7 @@ Evaluate each area below. Use these markers for every finding:
 | Check | Pass condition |
 |---|---|
 | No `name_search()` override | Use `_rec_names_search` class attribute instead |
+| No `name_get()` override | `name_get()` is deprecated in v18 — use `_compute_display_name()` decorated with `@api.depends(...)` |
 | `create()` uses `@api.model_create_multi` | Method signature is `def create(self, vals_list)` with the multi decorator |
 | No `view_type` in actions | Use `view_mode` instead |
 
@@ -117,7 +124,8 @@ Evaluate each area below. Use these markers for every finding:
 
 | Check | Pass condition |
 |---|---|
-| No `<tree>` tags | All list views use `<list>` (v18+) or confirm if `<tree>` is still accepted in chosen version |
+| No `<tree>` tags | All list views use `<list>` — `<tree>` was deprecated in v17 and removed in v19 |
+| No `//tree` in XPath expressions | All `<xpath expr="...">` attributes use `//list`, not `//tree` — `//tree` causes `ValidationError` at install on v18+ |
 | No `view_type` in `ir.actions.act_window` | Use `view_mode` instead |
 | No hard-coded IDs in domains | Domains use `ref()` or dynamic values, not hard-coded database IDs |
 | `groups` attribute uses XML IDs | `groups="module.group_name"` format, never a raw integer |
@@ -146,7 +154,7 @@ Evaluate each area below. Use these markers for every finding:
 | All models have ACL entries | Every model defined in `models/` has at least one row in the CSV |
 | CSV columns correct | Header: `id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink` |
 | Record rules where needed | If the module has multi-company or multi-user data isolation requirements, `ir.rule` records exist |
-| No `sudo()` without comment | Every `self.sudo()` call has an inline comment explaining why elevation is necessary |
+| No `sudo()` without comment | Every `self.sudo()` call has an inline comment explaining why elevation is necessary. `sudo()` must never be used to work around a missing ACL entry — the correct fix is always to update `ir.model.access.csv` or assign the user to the right group. |
 
 ---
 

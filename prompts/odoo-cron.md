@@ -30,7 +30,25 @@ Wait for all answers before generating.
 ## Step 2 — Add the Python method to the model
 
 Open the appropriate model file (e.g. `models/<model_name>.py`) and add the
-following **at class level** (not inside `__init__` or `create`):
+following **at class level** (not inside `__init__` or `create`).
+
+**If the user says the cron should call an existing business method** (e.g. `action_archive_inactive`),
+use the thin-wrapper pattern instead of the full scaffold:
+
+```python
+@api.model
+def _cron_$1(self):
+    """Scheduled action: <description>. Delegates to <existing_method>."""
+    _logger = logging.getLogger(__name__)
+    try:
+        records = self.search([('state', '=', 'active')])
+        records.<existing_method>()
+        _logger.info("_cron_$1: processed %d records", len(records))
+    except Exception as e:
+        _logger.error("_cron_$1: unexpected error: %s", e)
+```
+
+**If the cron is self-contained** (no existing method to delegate to), use the full scaffold:
 
 ```python
 # ── Scheduled action ────────────────────────────────────────────────────────
@@ -187,11 +205,50 @@ Show the user the exact line to add, with context from their current manifest.
 
 ---
 
-## Step 5 — Testing instructions
+## Step 5 — Generate test
 
-After generating, show the user how to test the cron in three ways:
+Create `tests/test_cron_$1.py`:
 
-### 5A — Odoo shell (fastest, recommended during development)
+```python
+# tests/test_cron_$1.py
+import logging
+from odoo.tests import tagged
+from odoo.tests.common import TransactionCase
+
+
+@tagged('post_install', '-at_install')
+class TestCron$1(TransactionCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # TODO: create fixtures matching the cron's domain
+        # cls.record = cls.env['<model.name>'].create({...})
+
+    def test_cron_runs_without_error(self):
+        """Cron method executes without raising an exception."""
+        self.env['<model.name>']._cron_$1()
+
+    def test_cron_processes_matching_records(self):
+        """Cron processes records that match the domain and skips others."""
+        # TODO: create a record that SHOULD be processed
+        # matching = self.env['<model.name>'].create({'state': 'active', ...})
+        # self.env['<model.name>']._cron_$1()
+        # self.assertEqual(matching.<field>, <expected_value>)
+        pass
+
+    def test_cron_handles_empty_result(self):
+        """Cron with no matching records returns without error."""
+        # Delete / don't create any matching records
+        self.env['<model.name>'].search([]).unlink()
+        self.env['<model.name>']._cron_$1()  # must not raise
+```
+
+Add `from . import test_cron_$1` to `tests/__init__.py`.
+
+---
+
+## Step 6 — Testing instructions (manual)
 
 ```bash
 # Start the interactive shell
@@ -220,7 +277,7 @@ In the Scheduled Actions UI, temporarily set the interval to 1 minute and
 
 ---
 
-## Step 6 — Critical warnings (always include these)
+## Step 7 — Critical warnings (always include these)
 
 After generating the files, append this warning block verbatim:
 

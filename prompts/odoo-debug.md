@@ -19,13 +19,15 @@ You are an Odoo expert. Analyse the error provided and follow this exact process
 
 Match the error against the table below and state the category explicitly before doing anything else.
 
+> **Tracebacks with nested exceptions:** When a cron or batch job wraps another exception (e.g. `Error while executing cron action` followed by `AttributeError`), **classify by the innermost exception**, not the outer wrapper. The cron context is secondary — fix the root cause first.
+
 | # | Category | Signature patterns |
 |---|----------|--------------------|
 | 1 | **Access / Permission** | `AccessError: You don't have access`, `You are not allowed to modify` |
 | 2 | **XML ID / External ID** | `ValueError: External ID not found`, `MissingError: No record found for` |
 | 3 | **View Architecture** | `View arch validation error`, `Element … is not allowed here`, `Invalid field name` |
 | 4 | **Asset / JavaScript** | `Asset bundle … CSS/JS compilation failed`, `Cannot find module '@web/…'`, `Template … not found` |
-| 5 | **Database / ORM Constraints** | `psycopg2.errors.UniqueViolation`, `IntegrityError: NOT NULL constraint`, `ForeignKeyViolation` |
+| 5 | **Database / ORM Constraints** | `psycopg2.errors.UniqueViolation`, `IntegrityError: NOT NULL constraint`, `ForeignKeyViolation`, `ProgrammingError: column "x" does not exist` |
 | 6 | **Python / ORM Code** | `AttributeError: '…' object has no attribute`, `KeyError: ir.model.access`, `TypeError` |
 | 7 | **Cron / Scheduled Actions** | `OperationalError: server closed the connection`, cron silently not running |
 | 8 | **Translation / i18n** | `Missing translation for`, untranslated strings appearing in the UI |
@@ -60,16 +62,42 @@ Make sure the file is listed in `__manifest__.py` under `'data'`.
 </record>
 ```
 
-**Primary fix — use `sudo()` when bypassing security intentionally:**
+**Diagnostic tool — inspect existing access rules (run in Odoo shell or psql):**
 ```python
-# Read a record as super-user (bypass access checks)
+# Odoo shell: odoo-bin shell -d mydb
+# Check model-level access
+env['ir.model.access'].search([('model_id.model', '=', 'my.model')]).read(
+    ['name', 'group_id', 'perm_read', 'perm_write', 'perm_create', 'perm_unlink']
+)
+# Check record rules
+env['ir.rule'].search([('model_id.model', '=', 'my.model')]).read(
+    ['name', 'domain_force', 'groups']
+)
+```
+```sql
+-- psql: verify ACL rows for a model
+SELECT ima.name, rg.full_name, perm_read, perm_write, perm_create, perm_unlink
+FROM ir_model_access ima
+JOIN ir_model im ON ima.model_id = im.id
+LEFT JOIN res_groups rg ON ima.group_id = rg.id
+WHERE im.model = 'my.model';
+```
+
+**`sudo()` — diagnostic bypass only, NOT a permanent fix:**
+```python
+# Use ONLY to confirm the error is access-related during debugging
 record = self.env['my.model'].sudo().browse(record_id)
 ```
+> ⚠️ `sudo()` silently elevates to superuser and bypasses ALL security including record rules.
+> **Do not use it as a permanent workaround.** The correct fix is to update `ir.model.access.csv`
+> or assign the user to the appropriate group. Every permanent `sudo()` call must have an inline
+> comment explaining why the elevation is intentional.
 
 **Other possible causes:**
 - The user's group (`res.groups`) was not assigned model access.
 - A `_check_access_rights` override in the model rejects the operation.
 - The action/button was called from a context where `uid` is the public user.
+- A field on the model has `groups='some.group'` restricting field-level access — raises `AccessError` that looks identical to a missing ACL row. Check field definitions for `groups=` attributes.
 
 **Debug command:**
 ```bash
@@ -233,6 +261,37 @@ partner_id = fields.Many2one('res.partner', string="Partner", ondelete='cascade'
 # Options: 'cascade', 'set null', 'restrict'
 ```
 
+**Primary fix — `ProgrammingError: column "x" of relation "y" does not exist`:**
+This means a field was added to the Python model but the module was not upgraded to apply the DB schema change, OR the field was added in a migration script that was not executed.
+```bash
+# Upgrade the module to sync the Python model with the DB
+./odoo-bin -u my_module -d mydb --stop-after-init
+```
+If it persists, check that the field name in Python (`_name` column derivation) matches the DB column name — Odoo converts `.` to `_` in model names and uses the field's `name` attribute as the column name.
+
+**Primary fix — `OperationalError: could not serialize access due to concurrent update`:**
+This happens when two transactions try to update the same record simultaneously (race condition). Odoo uses `SELECT FOR UPDATE` in some operations; if two workers race, PostgreSQL rejects one.
+
+```python
+# Option 1: use with_lock() to explicitly serialize
+record = self.env['my.model'].browse(record_id)
+record = record.with_lock()  # acquires SELECT FOR UPDATE
+record.write({'state': 'done'})
+
+# Option 2: retry with exponential backoff (for crons)
+import time
+for attempt in range(3):
+    try:
+        record.write({'state': 'done'})
+        break
+    except Exception as e:
+        if 'concurrent' in str(e) and attempt < 2:
+            self.env.cr.rollback()
+            time.sleep(0.5 * (attempt + 1))
+        else:
+            raise
+```
+
 **Other possible causes:**
 - A migration script (in `migrations/`) did not handle existing rows before adding a NOT NULL column.
 - A `_sql_constraints` entry was added after data was already created — run `-u module` then fix the data.
@@ -281,6 +340,7 @@ name = self.partner_id.name if self.partner_id else ''
 - Using `self.env['model'].search(...)` returns a recordset; calling `.name` on a multi-record set gives the first value in some Odoo versions but raises in others — always ensure a single record with `ensure_one()` or index `[0]`.
 - A mixin or abstract model method is called before the concrete model defines a required field.
 - A `@api.depends` decorator is missing, so a computed field returns `False` instead of a value.
+- **Common confusion — `res.partner` vs `res.users.partner_id`:** `res.partner` IS the partner — it has no `.partner_id` field. If you get `AttributeError: 'res.partner' object has no attribute 'partner_id'`, you are calling `.partner_id` on a partner instead of a user. Fix: if `patient_id` is `Many2one(res.partner)`, access `self.patient_id.name` directly. If it should be a user, change it to `Many2one(res.users)` and then access `self.patient_id.partner_id.name`.
 
 **Debug command:**
 ```bash
@@ -328,6 +388,15 @@ def _my_cron_job(self):
 ```bash
 ./odoo-bin -d mydb --max-cron-threads=1 --log-level=debug 2>&1 | grep -i "cron\|scheduler"
 ```
+
+**Reproduce a cron manually without waiting for the scheduler:**
+```bash
+# Fastest way to isolate the error:
+python odoo-bin shell -d mydb
+>>> env['my.model']._cron_my_job()
+# If the cron fails, you will see the full traceback here immediately.
+```
+This is much faster than waiting for the next scheduler tick or enabling debug logging.
 
 ---
 

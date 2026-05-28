@@ -16,6 +16,9 @@ Ask all three together in a single message so the user can answer at once:
 1. **Odoo version:** 18 or 19?
 2. **One-line description:** What does this module do? (Used in `__manifest__.py` summary field)
 3. **Main dependency besides `base`:** e.g. `sale`, `stock`, `account` — or just `base` if none.
+4. **Security groups?** Should this module define custom user groups (e.g. `group_my_module_user`, `group_my_module_manager`)?
+   - yes → generate `security/groups.xml` with 2 groups (user + manager) and update manifest
+   - no (default) → skip groups, use `base.group_user` for access rules
 
 Wait for the user's answers before proceeding.
 
@@ -87,6 +90,31 @@ id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 
 Header row only. New access rows will be added by `/odoo-model`.
 
+### `<module>/security/groups.xml` *(only if the user answered yes to question 4)*
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="group_<module>_user" model="res.groups">
+            <field name="name"><Module> User</field>
+            <field name="category_id" ref="base.module_category_hidden"/>
+            <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+        </record>
+
+        <record id="group_<module>_manager" model="res.groups">
+            <field name="name"><Module> Manager</field>
+            <field name="category_id" ref="base.module_category_hidden"/>
+            <field name="implied_ids" eval="[(4, ref('group_<module>_user'))]"/>
+        </record>
+
+    </data>
+</odoo>
+```
+
+If groups are generated, add `"security/groups.xml"` to the `"data"` list in `__manifest__.py` **before** `"security/ir.model.access.csv"`.
+
 ### `<module>/i18n/<module>.pot`
 
 ```pot
@@ -114,8 +142,43 @@ msgstr ""
 # © <YEAR> <Author>
 # License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl-3.0).
 
-# Import test classes here, e.g.:
-# from . import test_<module>
+from . import test_<module>
+```
+
+### `<module>/tests/test_<module>.py`
+
+```python
+# © <YEAR> <Author>
+# License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl-3.0).
+
+from odoo.tests import tagged
+from odoo.tests.common import TransactionCase
+
+
+@tagged("post_install", "-at_install")
+class Test<ModuleName>(TransactionCase):
+    """Smoke tests for <module> module."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # TODO: create shared fixtures here
+        # cls.partner = cls.env['res.partner'].create({'name': 'Test Partner'})
+
+    def test_module_installed(self):
+        """Module is installed and accessible."""
+        module = self.env['ir.module.module'].search([
+            ('name', '=', '<module_name>'),
+            ('state', '=', 'installed'),
+        ])
+        self.assertTrue(module, "Module '<module_name>' should be installed")
+
+    def test_base_model_accessible(self):
+        """Base model is accessible and returns a recordset."""
+        # Replace with your module's main model once added via /odoo-model
+        # records = self.env['<module>.<model>'].search([], limit=1)
+        # self.assertIsNotNone(records)
+        pass  # TODO: replace with real model test after running /odoo-model
 ```
 
 ### `<module>/static/description/index.html`
@@ -152,8 +215,11 @@ Files created:
   <module>/tests/__init__.py
   <module>/static/description/index.html
 
+  migrations/   (empty — add version folders here when schema changes are needed)
+
 Next steps:
   1. Add your first model:         /odoo-model <module>.<record>
   2. Add a wizard if needed:       /odoo-wizard <wizard_name>
   3. Install in Odoo:              odoo-bin -i <module> --dev=all
+  4. When you rename/change field types later, use /odoo-db-migrate
 ```

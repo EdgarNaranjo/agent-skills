@@ -15,9 +15,10 @@ Ask the user for:
 
 1. **Odoo version**: 18 or 19?
 2. **Module path**: path to the module root
-3. **Implementation plan or spec**: paste it, or describe what was supposed to be built (requirements, decisions, acceptance criteria)
+3. **Implementation plan or spec**: paste it, or describe what was supposed to be built (requirements, decisions, acceptance criteria).
+   If the feature was planned with `/odoo-plan`, the spec is in `docs/ODOO_PLAN_<feature>.md` in the module root.
 
-If `$ARGUMENTS` was provided, use it as the implementation plan.
+If `$1` was provided, use it as the implementation plan.
 
 Do not proceed until you have all three.
 
@@ -57,7 +58,7 @@ Run these checks regardless of what the spec says:
 - [ ] `display_name` computed correctly if overridden
 - [ ] `active` field present if the model should be archivable
 - [ ] `_rec_names_search` instead of `name_search()` override (v18+)
-- [ ] `name_get()` replaced by `_compute_display_name()` (v19 only)
+- [ ] `name_get()` replaced by `_compute_display_name()` (deprecated in v18, removed in v19)
 
 ### Views
 - [ ] `<list>` not `<tree>` (v17+)
@@ -65,6 +66,7 @@ Run these checks regardless of what the spec says:
 - [ ] XPath expressions reference fields that actually exist
 - [ ] `options="{'no_create': True}"` present where specified
 - [ ] Views added to manifest `data` list
+- [ ] Widget–field type compatibility verified (e.g. `priority` widget requires `Selection` with values `'0'/'1'/'2'`; `monetary` widget requires a `currency_field`; `many2many_tags` requires a `Many2many` field)
 
 ### Security
 - [ ] `ir.model.access.csv` has entries for every new model
@@ -108,10 +110,12 @@ Evaluate the response:
 
 | Evidence provided | Effect on verdict |
 |---|---|
-| Test command + output (all passing) | APPROVED is available |
+| Test command + output (all passing) | APPROVED or CONDITIONAL available — **only if all spec items are also ✅**. Passing tests on partial implementation do not unlock APPROVED when spec items are ❌. |
 | Test command + output (some failing) | REJECTED — list failing tests as critical |
-| "I didn't run tests" or no response | Verdict is locked to PENDING — do NOT issue APPROVED |
-| No tests exist in the module | Flag as critical finding — verdict cannot be APPROVED |
+| "I didn't run tests" or no response | Verdict is locked to PENDING — do NOT issue APPROVED. PENDING means code looks correct but tests haven't been confirmed yet. |
+| No tests exist in the module | REJECTED — missing tests are a critical finding. PENDING is NOT available when tests are absent — the user must write tests first, not just run them. |
+
+**Note:** PENDING is only valid when tests exist but have not yet been run. When no tests exist at all, the verdict is always REJECTED.
 
 Do not skip this step even if the code looks correct. A passing static review is not evidence.
 
@@ -167,6 +171,7 @@ What does the module do? What can users do with it? What changed?>
 ☐ ✅ APPROVED — implementation matches spec, no critical issues, tests passed
 ☐ ❌ REJECTED — X critical issues must be fixed before sign-off
 ☐ ⚠️ CONDITIONAL — approved with minor pending items listed above
+  *(CONDITIONAL is only valid for non-logic issues: missing translations, documentation gaps, cosmetic UI improvements. Any missing business logic, untested feature, or unfulfilled spec item is a critical finding — use REJECTED instead.)*
 ☐ 🕐 PENDING — code review complete but no test evidence provided yet
 
 **To sign off:** <list what must be fixed or confirmed if not approved>

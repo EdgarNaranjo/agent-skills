@@ -83,6 +83,11 @@ header/footer and logo.
                     <t t-call="web.external_layout">
                         <div class="page">
 
+                            <!-- ── Adapt the fields below to <model.name> ──
+                                 Replace doc.name, doc.date_order, doc.order_line,
+                                 doc.amount_total etc. with the actual field names
+                                 from your model. Remove sections that don't apply. -->
+
                             <!-- ── Report header ── -->
                             <div class="row mb-4">
                                 <div class="col-6">
@@ -257,7 +262,7 @@ For landscape or non-standard formats, add this to `report/report_<name>.xml`
 **before** the `ir.actions.report` record and add a reference to it:
 
 ```xml
-<record id="paperformat_<name>_landscape" model="report.paper.format">
+<record id="paperformat_<name>_landscape" model="report.paperformat">
     <field name="name"><ReportTitle> Landscape</field>
     <field name="default">False</field>
     <field name="format">A4</field>  <!-- or custom -->
@@ -282,6 +287,39 @@ Then in the `ir.actions.report` record add:
 ## Step 5 — Testing instructions
 
 After all files are created, show the user exactly how to test:
+
+### Automated test (generate this file)
+
+Create `tests/test_report_<name>.py`:
+
+```python
+# tests/test_report_<name>.py
+from odoo.tests import tagged
+from odoo.tests.common import TransactionCase
+
+
+@tagged('post_install', '-at_install')
+class TestReport<Name>(TransactionCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.record = cls.env['<model.name>'].create({
+            # TODO: fill required fields
+        })
+
+    def test_report_renders_without_error(self):
+        """Report action renders without raising an exception."""
+        report = self.env['ir.actions.report'].search(
+            [('report_name', '=', '<module>.report_<name>')], limit=1
+        )
+        self.assertTrue(report, "Report action not found")
+        # Render to HTML (faster than PDF in tests)
+        html_content, _type = report._render_qweb_html([self.record.id])
+        self.assertTrue(html_content, "Report rendered empty content")
+```
+
+Add `from . import test_report_<name>` to `tests/__init__.py` and add `tests/test_report_<name>.py` to your test runner.
 
 ### In-browser PDF test URL
 ```

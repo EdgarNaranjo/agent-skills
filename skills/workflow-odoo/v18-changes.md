@@ -87,6 +87,20 @@ class MyModel(models.Model):
         return super().create(vals_list)
 ```
 
+### Prepare for v19: `_compute_display_name()` available in v18
+
+Although `name_get()` still works in v18, you can already use `_compute_display_name()` to prepare for v19:
+
+```python
+# Works in v18 AND v19 — future-proof pattern
+@api.depends('code', 'name')
+def _compute_display_name(self):
+    for rec in self:
+        rec.display_name = f"[{rec.code}] {rec.name}"
+```
+
+If you are developing a new module targeting v18 and plan to upgrade to v19, use `_compute_display_name()` from the start.
+
 ---
 
 ## View Changes

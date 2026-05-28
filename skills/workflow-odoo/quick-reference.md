@@ -86,6 +86,7 @@ access_my_model_manager,my.model manager,model_my_model,base.group_system,1,1,1,
 |---|---|
 | Overriding `name_search()` | Use `_rec_names_search = [...]` on the model |
 | `<tree>` tag in views | `<list>` (required since v17) |
+| `<xpath expr="//tree">` in inherited views | `<xpath expr="//list">` — causes install error in v19 |
 | `selection_add` without `ondelete` | Always add `ondelete={"value": "cascade"}` (or desired action) |
 | `from odoo.tools.translate import _` | `from odoo import _` |
 | Test class with no `@tagged` | Add `@tagged('post_install', '-at_install')` |
@@ -94,4 +95,8 @@ access_my_model_manager,my.model manager,model_my_model,base.group_system,1,1,1,
 | Version `1.0.0` or `18.1.0` in manifest | Must follow `18.0.x.y.z` / `19.0.x.y.z` format |
 | New XML file not listed in manifest `data` | Every view/data file must appear in `data` or `demo` |
 | `name_get()` override in v19 | Override `_compute_display_name()` instead |
+| `@api.depends` missing on `_compute_display_name` | **Silent bug** — display_name never updates; always add `@api.depends` |
+| `display_name = fields.Char(...)` declared on model in v19 | Remove it — conflicts with built-in `display_name` computed field |
 | `@api.model def create(self, vals)` in v19 | Must be `@api.model_create_multi` with `vals_list` |
+| `read_group()` renamed to `_read_group()` only | Return is now tuples, not dicts — consuming code must be rewritten |
+| `datetime.utcnow()` in Python 3.12 (Odoo 19) | Use `fields.Datetime.now()` or `datetime.now(timezone.utc)` |

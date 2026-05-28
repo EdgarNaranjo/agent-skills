@@ -39,6 +39,12 @@ $1 is formatted as `<external_module>.<view_record_id>`, e.g. `sale.view_order_f
 - `external_module` = the part before the dot → used in `inherit_id ref="..."`
 - The model can usually be inferred from the view ID (e.g. `view_order_form` → `sale.order`), but confirm with the user.
 
+**Verify the XML ID exists before generating.** Use the `odoo_find_xmlid` tool to confirm the canonical ID:
+```
+odoo_find_xmlid(query="$1")
+```
+If the tool returns a different or corrected XML ID, use that exact value and inform the user of the correction. If the ID cannot be found, tell the user and ask them to verify the XML ID manually before proceeding.
+
 ---
 
 ## Step 3 — Generate `views/<model>_views.xml`
@@ -68,7 +74,7 @@ If a `views/` file already exists for this model in the module, append the new r
 ```
 
 Naming conventions:
-- Record `id`: `view_<model_name>_form_inherit_<module>` (or `list`, `tree`, `search`, etc.)
+- Record `id`: `view_<model_name>_form_inherit_<module>` (or `list`, `search`, `kanban`, etc. — **never `tree`**, use `list` for list views)
 - `name` field: `<module>.<model_name>.<view_type>.inherit`
 
 ---
@@ -258,6 +264,33 @@ Make a field required conditionally (Odoo 19):
 
 ---
 
+### 4I — Add a column to a list view
+
+> **Odoo 19:** Use `//list` in XPath expressions. `//tree` causes a `ValidationError` at install time.
+
+Add a column after an existing column:
+```xml
+<xpath expr="//list/field[@name='partner_id']" position="after">
+    <field name="my_custom_field"/>
+</xpath>
+```
+
+Add a column at the end of the list:
+```xml
+<xpath expr="//list" position="inside">
+    <field name="my_custom_field"/>
+</xpath>
+```
+
+Add a decoration rule to the list (e.g. highlight rows when urgent):
+```xml
+<xpath expr="//list" position="attributes">
+    <attribute name="decoration-danger">urgency == 'high'</attribute>
+</xpath>
+```
+
+---
+
 ## Step 5 — XPath construction rules (always follow these)
 
 1. **Prefer semantic selectors** — `//field[@name='x']`, `//button[@name='y']`,
@@ -292,6 +325,14 @@ Add the view file to the `data` list:
     # ... existing entries ...
     'views/<model_name>_views.xml',
 ],
+```
+
+Also bump the module version (adding a view inheritance is a feature change):
+```python
+# Before
+'version': '19.0.1.0.0',
+# After
+'version': '19.0.1.1.0',   # increment 4th segment
 ```
 
 Show the user the exact line to insert, with context from their current manifest.

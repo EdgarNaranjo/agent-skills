@@ -15,6 +15,7 @@ Automatic behaviors for Odoo 18/19 module development. These activate without be
 
 1. **Confirm Odoo version on first interaction.**
    When the user sends their first message, if the target version (18 or 19) is not already known, ask before writing any code. Do NOT ask proactively before the user writes anything. Store the answer and never ask again in the same session.
+   Note to individual prompts: if the Odoo version was already established by the skill in this session, do not ask again. Use the stored version directly.
 
 2. **Confirm UI language on first interaction.**
    On the first message, also ask: "What language should user-visible labels be in? (e.g. English, Spanish, French — default: English)"
@@ -50,6 +51,7 @@ Automatic behaviors for Odoo 18/19 module development. These activate without be
    - New feature / new field or view → bump `minor` (e.g. `19.0.1.0.0` → `19.0.2.0.0`)
    - Breaking change / data migration needed → bump `major` (e.g. `19.0.1.0.0` → `19.0.2.0.0` with migration script)
    Always show the old and new version in your response. Never leave a modified module at the same version.
+   **Exception:** After running `/odoo-migrate`, the Odoo version prefix change (`18.0.x` → `19.0.x`) counts as the version bump for that operation. Do not apply an additional patch/minor increment on top of a migrate run.
 
 10. **Apply version-correct patterns automatically.**
    Use the detected version to select the right API. Do not mix v16 patterns into v18/v19 code. When unsure, flag it and show both options.
@@ -69,6 +71,8 @@ Automatic behaviors for Odoo 18/19 module development. These activate without be
 
    Areas counted separately: `models/`, `views/`, `security/`, `tests/`, `wizards/`, `reports/`, `controllers/`.
 
+   **Exception — slash commands designed to be multi-area:** `/odoo-module`, `/odoo-model`, `/odoo-wizard`, `/odoo-report`, `/odoo-cron` intentionally touch multiple areas by design. Do NOT apply workload warning for these — their multi-file output is expected and normal. Apply workload assessment only for free-form requests ("add this feature", "change this behavior") not triggered by a specific slash command.
+
 2. **Ask instead of assume when context is missing.**
    If a model, field, XML ID, or file does not exist in the detected module, ask before inventing it. Example: "No encuentro el modelo `X` en este módulo. ¿Es una herencia o lo creo nuevo?"
 
@@ -84,7 +88,7 @@ Automatic behaviors for Odoo 18/19 module development. These activate without be
 
 At the start of the first interaction, offer session tracking once:
 
-> "¿Quieres que lleve un registro de esta sesión? Crearé un `ODOO_SESSION.md` con las decisiones tomadas, cambios aplicados y riesgos pendientes. (sí / no)"
+> "¿Quieres que cree un archivo `ODOO_SESSION.md` en tu módulo para rastrear las decisiones técnicas, archivos modificados y riesgos identificados durante esta sesión? (Es un archivo de texto local en tu repositorio — no se envía a ningún lado.) sí / no"
 
 - If the user says **yes** → create or read `ODOO_SESSION.md` in the module root and keep it updated throughout the session.
 - If the user says **no** → never mention it again.
@@ -120,6 +124,7 @@ When active, update `ODOO_SESSION.md` after each significant action:
 - [module-structure.md](module-structure.md) — canonical directory layout and checklist
 - [v18-changes.md](v18-changes.md) — API changes introduced in Odoo 18
 - [v19-changes.md](v19-changes.md) — API changes introduced in Odoo 19
+- [db-migrations.md](db-migrations.md) — migration scripts (`migrations/` folder): field rename, type change, XML ID rename, openupgradelib helpers
 - [testing-patterns.md](testing-patterns.md) — test class setup, tagged tests, common assertions
 - [translations.md](translations.md) — `_()` usage, `.pot` generation, i18n folder conventions
 - [owl-patterns.md](owl-patterns.md) — `patch()`, custom field widgets, services, asset declaration

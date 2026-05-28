@@ -20,6 +20,9 @@ Ask all at once in a single message:
    - New model (`_name = "$1"`) — creates a new database table
    - Inherits existing (`_inherit = "<existing.model>"`) — extends an existing model
 5. **Chatter?** Should this model have chatter (mail.thread + mail.activity.mixin)? yes / no
+6. **Views:** Which views do you need?
+   - form + list + search (default — always generated)
+   - + kanban (add if model will be shown as kanban cards)
 
 Wait for the user's answers before generating any code.
 
@@ -39,13 +42,15 @@ Given the model name (e.g. `sale.order.custom`), derive:
 
 ## Step 3 — Create and update all files
 
+> **Before modifying any existing file, read its current content first.** This applies to `models/__init__.py`, `__manifest__.py`, and `security/ir.model.access.csv`. Never overwrite — always append or patch.
+
 ### FILE: `models/<python_filename>.py`
 
 Apply these **version-correct patterns**:
 
 | Pattern | v18 | v19 |
 |---|---|---|
-| Display name override | `_rec_names_search = ['name', ...]` for multi-field search | Same |
+| Multi-field search (`name_search`) | `_rec_names_search = ['name', ...]` — replaces `name_search()` override | Same |
 | name_get() | Do NOT override in v18/v19 | Do NOT use; use `_compute_display_name()` in v19 only if needed |
 | List view tag | `<list>` (v17+) | `<list>` |
 | create() override | `@api.model_create_multi` not required unless explicitly overriding | `@api.model_create_multi` required if overriding create() |
@@ -74,6 +79,29 @@ class <ClassName>(models.Model):
     _sql_constraints = [
         ("name_uniq", "unique(name)", "The name must be unique."),
     ]
+
+    # --- Override create() if you need to pre/post-process values ---
+    # v19: MUST use @api.model_create_multi; v18: strongly recommended
+    # @api.model_create_multi
+    # def create(self, vals_list):
+    #     for vals in vals_list:
+    #         # pre-processing here
+    #         pass
+    #     return super().create(vals_list)
+
+    # --- Computed fields ---
+    # @api.depends('field_a', 'field_b')
+    # def _compute_my_field(self):
+    #     for rec in self:
+    #         rec.my_computed_field = rec.field_a + rec.field_b
+    #
+    # my_computed_field = fields.Float(compute='_compute_my_field', store=True)
+
+    # --- Onchange handlers ---
+    # @api.onchange('field_name')
+    # def _onchange_field_name(self):
+    #     if self.field_name:
+    #         self.other_field = self.field_name.related_value
 ```
 
 **If chatter = yes, add to the class definition:**
@@ -157,11 +185,59 @@ Use `<list>` (not `<tree>`) for the list view — correct for v17, v18, and v19.
         </field>
     </record>
 
+    <!-- Search View -->
+    <record id="view_<xml_id_prefix>_search" model="ir.ui.view">
+        <field name="name"><xml_id_prefix>.search</field>
+        <field name="model">$1</field>
+        <field name="arch" type="xml">
+            <search string="<Human-readable name>">
+                <field name="name"/>
+                <!-- Add more search fields here -->
+                <filter string="Active" name="active" domain="[('active','=',True)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Status" name="group_by_state" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Kanban View (generate only if requested in Step 1 question #6) -->
+    <record id="view_<xml_id_prefix>_kanban" model="ir.ui.view">
+        <field name="name"><xml_id_prefix>.kanban</field>
+        <field name="model">$1</field>
+        <field name="arch" type="xml">
+            <kanban string="<Human-readable name>" default_group_by="state">
+                <field name="name"/>
+                <field name="state"/>
+                <!-- Add fields needed in the kanban card here -->
+                <templates>
+                    <t t-name="kanban-card">
+                        <div class="oe_kanban_card oe_kanban_global_click">
+                            <div class="o_kanban_record_top">
+                                <div class="o_kanban_record_headings">
+                                    <strong class="o_kanban_record_title">
+                                        <field name="name"/>
+                                    </strong>
+                                </div>
+                            </div>
+                            <div class="o_kanban_record_bottom">
+                                <div class="oe_kanban_bottom_left">
+                                    <field name="state" widget="statusbar"/>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
     <!-- Window Action -->
     <record id="<xml_id_prefix>_action" model="ir.actions.act_window">
         <field name="name"><Model Display Name></field>
         <field name="res_model">$1</field>
-        <field name="view_mode">list,form</field>
+        <field name="view_mode">list,form,search</field>
+        <!-- If kanban requested: <field name="view_mode">kanban,list,form,search</field> -->
     </record>
 
     <!-- Menu Item — adjust parent to suit the module's menu structure -->
@@ -216,7 +292,7 @@ class Test<ClassName>(TransactionCase):
     def test_required_fields(self):
         """Test that missing required fields raise a ValidationError."""
         from odoo.exceptions import ValidationError
-        with self.assertRaises(Exception):
+        with self.assertRaises(ValidationError):
             self.Model.create({})
 
     # Add domain-specific test methods below:
@@ -243,6 +319,14 @@ from . import test_<python_filename_without_py>
 "views/<xml_id_prefix>_views.xml",
 ```
 
+Also **bump the module version** (adding a new model is a schema change — minor bump):
+```python
+# Before
+"version": "19.0.1.0.0",
+# After
+"version": "19.0.1.1.0",   # increment 4th segment (minor)
+```
+
 If chatter is enabled, also add `"mail"` to `"depends"` if not already there.
 
 ---
@@ -264,6 +348,12 @@ Files updated:
   tests/__init__.py           ← added import
   security/ir.model.access.csv ← added access row
   __manifest__.py             ← added view XML and security CSV to data[]
+
+Views generated:
+  ✓ Form view
+  ✓ List view (uses <list> tag)
+  ✓ Search view
+  <if kanban requested: ✓ Kanban view>
 
 Version-specific patterns applied (v<VERSION>):
   ✓ List view uses <list> tag

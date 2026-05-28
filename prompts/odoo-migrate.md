@@ -166,6 +166,33 @@ Apply all of the following:
 #### 3.2 Remaining `<tree>` → `<list>`
 Same as step 3.7 above (in case it was not done in a prior v17→v18 migration).
 
+Also check `view_mode` values in `ir.actions.act_window` records — the mode name changed too:
+```xml
+<!-- Before -->
+<field name="view_mode">tree,form</field>
+
+<!-- After -->
+<field name="view_mode">list,form</field>
+```
+Search for `view_mode` values containing `tree` across all XML files and replace with `list`.
+
+#### 3.2b XPath expressions targeting `<tree>` in inherited views
+Search every `.xml` file for XPath expressions that reference the `tree` tag. These break at install time because the tag no longer exists.
+
+```xml
+<!-- Before -->
+<xpath expr="//tree[1]" position="inside">
+<xpath expr="//tree/field[@name='name']" position="before">
+<xpath expr="//tree" position="attributes">
+
+<!-- After -->
+<xpath expr="//list[1]" position="inside">
+<xpath expr="//list/field[@name='name']" position="before">
+<xpath expr="//list" position="attributes">
+```
+
+Search pattern: `//tree` anywhere inside an `expr="..."` attribute. Replace all occurrences. This is a common source of `odoo.exceptions.ValidationError: Invalid XML` errors at install time.
+
 #### 3.3 `name_get()` → `_compute_display_name()`
 Find any model that overrides `name_get()`:
 ```python
@@ -186,9 +213,15 @@ def _compute_display_name(self):
         record.display_name = f'[{record.code}] {record.name}'
 ```
 Rules:
-- Identify which fields are used to build the name and add them to `@api.depends(...)`
-- If the `name_get()` had branching logic per record (e.g. different format depending on state), preserve the logic inside the `for` loop
-- If `name_get()` was also used for `name_search()` (i.e. it depended on context values), flag for manual review — the `_compute_display_name` approach does not support context-dependent display names the same way
+- **`@api.depends` is mandatory.** Without it the compute never re-triggers and you get a silent bug where `display_name` stays stale. Identify every field used to build the name string and list them.
+- If the `name_get()` had branching logic per record (e.g. different format depending on state), preserve the logic inside the `for` loop.
+- If `name_get()` was also used for `name_search()` (i.e. it depended on context values), flag for manual review — `_compute_display_name` does not support context-dependent display names the same way.
+- **Check for an explicit `display_name` field declaration on the model.** In v19, `display_name` is a computed field built into `models.Model`. If the model declares `display_name = fields.Char(...)` explicitly, that declaration conflicts and must be removed:
+```python
+# Remove this if present — it conflicts with the built-in in v19
+# display_name = fields.Char(compute='_compute_display_name', store=True)
+```
+If the field is declared with `store=True`, flag for manual review — you may need a database migration to drop the column.
 
 #### 3.4 `create()` → `@api.model_create_multi` (if not already migrated)
 Same as step 3.5 in v17→v18.
@@ -211,8 +244,32 @@ Also fix string domains in XML `<field name="domain">`:
 ```
 If a string domain uses dynamic interpolation (e.g. `"[('user_id', '=', %s)]" % uid`), flag for manual review — convert to a proper domain expression or `_domain` compute method.
 
-#### 3.6 OWL imports
-In all `.js` and `.owl` files, find:
+**`eval(domain)` calls must also be removed.** When converting `domain = "[...]"` to a list, also remove any `eval()` wrapping the domain variable:
+```python
+# Before
+domain = "[('state', '=', 'draft')]"
+return self.search(eval(domain))
+
+# After — remove eval(), use list directly
+domain = [('state', '=', 'draft')]
+return self.search(domain)
+```
+Leaving `eval()` after the conversion causes `TypeError: eval() argument must be a string` at runtime. All `eval(domain)` patterns are also security risks — flag them explicitly.
+
+**Also check `domain_force` in `ir.rule` records.** Record rules with a string-format domain raise a JSON parse error at install time in v19:
+```xml
+<!-- Before — causes install error in v19 -->
+<field name="domain_force">[('user_id', '=', user.id)]</field>
+
+<!-- After — keep as-is, it is the expected format for ir.rule domain_force -->
+<field name="domain_force">[('user_id', '=', user.id)]</field>
+```
+Note: `domain_force` in `ir.rule` uses a special evaluated string syntax — it is NOT a Python list literal and should remain as a string. What must change is any `domain_force` that uses deprecated operators or field paths that no longer exist in v19. Scan each rule and verify the field names and operators are still valid.
+
+#### 3.6 OWL imports and lifecycle hooks
+In all `.js` and `.owl` files, apply two changes:
+
+**6a — Global owl imports → named imports:**
 ```javascript
 // Before — global owl object usage
 const { Component, useState, useRef } = owl;
@@ -225,6 +282,37 @@ import { Component, useState, useRef } from "@odoo/owl";
 ```
 Map all used `owl.*` properties to their equivalent named exports from `@odoo/owl`. If a property cannot be mapped (unfamiliar API), flag for manual review.
 
+**6b — OWL 1 lifecycle methods → OWL 2 hooks:**
+Scan every `Component` subclass for these OWL 1 lifecycle methods and migrate them to hooks inside `setup()`:
+
+| OWL 1 method | OWL 2 hook |
+|---|---|
+| `mounted() {}` | `onMounted(() => { ... })` |
+| `willUnmount() {}` | `onWillUnmount(() => { ... })` |
+| `willStart() {}` | `onWillStart(async () => { ... })` |
+| `willPatch() {}` | `onWillPatch(() => { ... })` |
+| `patched() {}` | `onPatched(() => { ... })` |
+
+```javascript
+// Before — OWL 1 lifecycle methods
+class MyWidget extends Component {
+    mounted() { console.log('mounted'); }
+    willUnmount() { console.log('unmounting'); }
+}
+
+// After — OWL 2 hooks inside setup()
+import { Component, onMounted, onWillUnmount } from "@odoo/owl";
+
+class MyWidget extends Component {
+    setup() {
+        onMounted(() => { console.log('mounted'); });
+        onWillUnmount(() => { console.log('unmounting'); });
+    }
+}
+```
+Note: if the class already has a `setup()` method, add the hook calls inside the existing `setup()`, do not create a duplicate.
+If a lifecycle method is complex or has async logic, flag for manual review.
+
 #### 3.7 `read_group()` → `_read_group()`
 Find:
 ```python
@@ -234,6 +322,11 @@ result = self.env['my.model'].read_group(
     ['partner_id', 'amount_total:sum'],
     ['partner_id'],
 )
+# Old consuming code — result is a list of dicts:
+for group in result:
+    partner = group['partner_id']  # (id, display_name) tuple
+    total = group['amount_total']  # float
+    count = group['partner_id_count']  # int
 ```
 Replace with:
 ```python
@@ -241,10 +334,23 @@ Replace with:
 result = self.env['my.model']._read_group(
     domain=[('state', '=', 'open')],
     groupby=['partner_id'],
-    aggregates=['amount_total:sum'],
+    aggregates=['amount_total:sum', '__count'],
 )
+# New consuming code — result is a list of tuples:
+# Each tuple has one element per groupby field, then one per aggregate, in order.
+for partner, amount_total, count in result:
+    # partner is a recordset (Many2one) or a scalar value
+    # amount_total is a float
+    # count is an int (from __count)
+    pass
 ```
-Note: `_read_group()` returns a list of tuples, not a list of dicts. The data structure is different. Flag every `read_group()` call for manual verification of the consuming code — do not assume the rest of the code handles the new return format without review.
+Key differences in the return value:
+- Old: list of dicts with field names as keys (`group['partner_id']`, `group['amount_total']`)
+- New: list of tuples in the same order as `groupby` + `aggregates` (`partner, amount_total`)
+- Old: `partner_id` in the dict was `(id, display_name)` for Many2one; new: it is a recordset or `False`
+- Old: count was accessed as `f'{groupby_field}_count'`; new: add `'__count'` to `aggregates` and unpack positionally
+
+**Always update the consuming code.** Do not just rename `read_group` to `_read_group` — the consuming code will break at runtime with a `TypeError` or `KeyError`. Flag every occurrence with a comment and show the updated consuming code alongside the call.
 
 #### 3.8 Check for other removed deprecated methods
 Scan for any use of these removed or deprecated APIs and flag each one with a `# TODO (v19 migration): ...` comment:
@@ -255,6 +361,50 @@ Scan for any use of these removed or deprecated APIs and flag each one with a `#
 | `ir.actions.report` `report_type='qweb-html'` | Use `report_type='qweb-pdf'` or new type |
 | `self.env.ref(..., raise_if_not_found=False)` returning `None` | Now raises by default unless wrapped in try/except |
 | Direct `osv` imports | Use `odoo.models` instead |
+
+#### 3.9 Python 3.12 compatibility
+Odoo 19 requires Python 3.12+. Scan for patterns that are removed or changed in Python 3.12:
+
+**`datetime.utcnow()` — deprecated, raises `DeprecationWarning` in 3.12:**
+```python
+# Before
+from datetime import datetime
+now = datetime.utcnow()
+
+# After
+from datetime import datetime, timezone
+now = datetime.now(timezone.utc).replace(tzinfo=None)  # naive UTC, same as before
+# or, if you want timezone-aware:
+now = datetime.now(timezone.utc)
+```
+In Odoo context, `fields.Datetime.now()` is the preferred way — use that instead of `datetime.utcnow()` when setting field values.
+
+**Removed standard library modules — cause `ModuleNotFoundError` at install time:**
+
+| Removed in 3.12 | Action |
+|---|---|
+| `import distutils` | Use `setuptools` or remove if unused |
+| `import cgi` | Use `urllib.parse` or `email.parser` depending on use case |
+| `import imghdr` | Use `filetype` library or check magic bytes manually |
+| `import cgitb` | Use `traceback` instead |
+| `import aifc`, `import sunau`, `import audioop` | Remove if unused; no standard replacement |
+| `import pipes` | Use `subprocess` instead |
+| `import telnetlib` | Use `telnetlib3` or `asyncio` |
+
+Scan all Python files for any `import` of these modules. If found, flag for manual review — do not auto-replace as the correct replacement depends on how the module is used.
+
+**`typing` changes in 3.12 (minor):**
+```python
+# Before — still works but deprecated
+from typing import List, Dict, Optional, Tuple
+def foo(items: List[str]) -> Optional[Dict[str, int]]:
+    ...
+
+# After — use built-in generics
+def foo(items: list[str]) -> dict[str, int] | None:
+    ...
+```
+This is not an error — just a deprecation warning. Flag for cleanup but do not block migration.
 
 ---
 
@@ -328,4 +478,6 @@ Verify the migrated module installs and all tests pass:
 
 If tests fail after migration, run `/odoo-test` to check for gaps in test coverage,
 or `/odoo-review` to get a full audit of the migrated module.
+
+> **Database migration scripts:** If the code migration introduced field renames, type changes, or XML ID renames, the production database will also need migration scripts in the `migrations/` folder. Run `/odoo-db-migrate` to generate those scripts.
 ```

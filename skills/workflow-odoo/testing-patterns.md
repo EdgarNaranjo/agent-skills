@@ -168,6 +168,88 @@ def test_with_user_context(self):
 uv run odoo-bin -d mydb --test-enable --stop-after-init -i my_module
 ```
 
+## Modern Assertion Helpers
+
+### assertRecordValues — compare multiple fields in one call
+
+```python
+# Instead of:
+self.assertEqual(record.name, "Test")
+self.assertEqual(record.state, "draft")
+self.assertEqual(record.amount, 100.0)
+
+# Use assertRecordValues (Odoo built-in):
+self.assertRecordValues(records, [
+    {'name': 'Test', 'state': 'draft', 'amount': 100.0},
+])
+# For multiple records:
+self.assertRecordValues(records, [
+    {'name': 'Record 1', 'state': 'draft'},
+    {'name': 'Record 2', 'state': 'confirmed'},
+])
+```
+
+### odoo.tests.Form — simulates UI interaction with automatic onchange
+
+```python
+from odoo.tests.common import Form
+
+def test_onchange_via_form(self):
+    """Form helper triggers onchange automatically, like a real user interaction."""
+    with Form(self.env['hospital.appointment']) as f:
+        f.patient_id = self.partner
+        # onchange is triggered automatically here
+        self.assertEqual(f.notes, f"Patient: {self.partner.name}")
+    record = f.save()
+    self.assertEqual(record.state, 'draft')
+
+# For modifying an existing record:
+def test_change_existing_record(self):
+    with Form(self.appointment) as f:
+        f.state = 'confirmed'
+    # Changes are saved on __exit__
+    self.assertEqual(self.appointment.state, 'confirmed')
+```
+
+> **Use `Form` instead of calling `_onchange_*` directly** when you need to simulate the full onchange chain as a user would trigger it.
+
+### with_user() — permission boundary testing
+
+```python
+def test_regular_user_cannot_delete(self):
+    """Regular users should not be able to delete records."""
+    from odoo.exceptions import AccessError
+    with self.assertRaises(AccessError):
+        self.appointment.with_user(self.env.ref('base.user_demo')).unlink()
+
+def test_manager_can_confirm(self):
+    manager = self.env.ref('base.user_admin')
+    self.appointment.with_user(manager).action_confirm()
+    self.assertEqual(self.appointment.state, 'confirmed')
+```
+
+> Prefer `with_user()` over `sudo()` in tests — it actually exercises the access rules.
+
+### mock.patch — external APIs, emails, datetime
+
+```python
+from unittest.mock import patch
+
+def test_cron_with_mocked_time(self):
+    """Test cron behavior at a specific date without real time dependency."""
+    from datetime import datetime
+    mock_now = datetime(2024, 1, 15, 10, 0, 0)
+    with patch('odoo.fields.Datetime.now', return_value=mock_now):
+        self.env['hospital.appointment']._cron_send_reminders()
+        # assert based on mock_now
+
+def test_send_email_not_called(self):
+    """Verify email is NOT sent in certain conditions."""
+    with patch.object(type(self.env['mail.mail']), 'send') as mock_send:
+        self.appointment.action_confirm()
+        mock_send.assert_not_called()
+```
+
 ## Checklist: Tests for Every Feature
 
 For every new method/feature, write tests for:
