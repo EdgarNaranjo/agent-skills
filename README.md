@@ -123,7 +123,7 @@ pi install npm:pi-odoo-workflow
 pi install git:github.com/EdgarNaranjo/agent-skills
 
 # Try without installing (-e loads the package for this session only, no persistent install)
-pi -e git:github.com/EdgarNaranjo/agent-skills@workflow-odoo
+pi -e git:github.com/EdgarNaranjo/agent-skills
 ```
 
 ### Claude Code (skill only)
@@ -131,7 +131,7 @@ pi -e git:github.com/EdgarNaranjo/agent-skills@workflow-odoo
 The skill works in Claude Code via the [Agent Skills](https://agentskills.io) standard. You get the automatic behaviors and all reference guides. You do **not** get the `/odoo-*` slash commands (pi-specific syntax) or the `odoo_scan` / `odoo_find_xmlid` tools (pi extensions).
 
 ```bash
-npx skills add EdgarNaranjo/agent-skills@workflow-odoo -g -y
+npx skills add EdgarNaranjo/agent-skills -g -y
 ```
 
 ---
